@@ -408,6 +408,16 @@ class AnnotationParser implements PreParserInterface
         $inputConfiguration['fields'] = $fields;
         $inputConfiguration = self::getDescriptionConfiguration($classAnnotations) + $inputConfiguration;
 
+        $publicAnnotation = self::getFirstAnnotationMatching($classAnnotations, GQL\IsPublic::class);
+        if ($publicAnnotation) {
+            $inputConfiguration['fieldsDefaultPublic'] = self::formatExpression($publicAnnotation->value);
+        }
+
+        $accessAnnotation = self::getFirstAnnotationMatching($classAnnotations, GQL\Access::class);
+        if ($accessAnnotation) {
+            $inputConfiguration['fieldsDefaultAccess'] = self::formatExpression($accessAnnotation->value);
+        }
+
         return ['type' => $inputAnnotation->isRelay ? 'relay-mutation-input' : 'input-object', 'config' => $inputConfiguration];
     }
 
@@ -627,17 +637,17 @@ class AnnotationParser implements PreParserInterface
                     }
                 }
 
-                if ($accessAnnotation) {
-                    $fieldConfiguration['access'] = self::formatExpression($accessAnnotation->value);
-                }
-
-                if ($publicAnnotation) {
-                    $fieldConfiguration['public'] = self::formatExpression($publicAnnotation->value);
-                }
-
                 if ($fieldAnnotation->complexity) {
                     $fieldConfiguration['complexity'] = self::formatExpression($fieldAnnotation->complexity);
                 }
+            }
+
+            if ($accessAnnotation) {
+                $fieldConfiguration['access'] = self::formatExpression($accessAnnotation->value);
+            }
+
+            if ($publicAnnotation) {
+                $fieldConfiguration['public'] = self::formatExpression($publicAnnotation->value);
             }
 
             $fields[$fieldName] = $fieldConfiguration;

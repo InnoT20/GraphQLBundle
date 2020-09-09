@@ -2,5 +2,7 @@
 <spaces>'type' => <type>,
 <spaces>'description' => <description>,<defaultValue>
 <spaces># validation is a custom option managed only by the bundle
-<spaces>'validation' => <validationConfig>
+<spaces>'validation' => <validationConfig>,
+<spaces>'public' => <public>,
+<spaces>'access' => <access>
 ],

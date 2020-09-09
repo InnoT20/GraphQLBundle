@@ -169,9 +169,12 @@ class AnnotationParserTest extends TestCase
     {
         $this->expect('PlanetInput', 'input-object', [
             'description' => 'Planet Input type description',
+            'fieldsDefaultPublic' => '@=isAuthenticated()',
+            'fieldsDefaultAccess' => '@=isAuthenticated()',
             'fields' => [
                 'name' => ['type' => 'String!'],
                 'population' => ['type' => 'Int!'],
+                'kgbWatchYou' => ['type' => 'Boolean!', 'public' => "@=hasRole('KGB')"],
             ],
         ]);
     }
