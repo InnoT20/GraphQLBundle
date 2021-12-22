@@ -14,6 +14,8 @@ use Overblog\GraphQLBundle\Annotation as GQL;
  */
 #[GQL\Input]
 #[GQL\Description('Planet Input type description')]
+#[GQL\Access('isAuthenticated()')]
+#[GQL\IsPublic('isAuthenticated()')]
 class Planet
 {
     /**
@@ -63,13 +65,10 @@ class Planet
     protected array $tags;
 
     /**
-     * @GQL\Field(type="Int!")
-     */
-    protected $population;
-
-    /**
      * @GQL\Field(type="Boolean!")
      * @GQL\IsPublic("hasRole('KGB')")
      */
-    protected $kgbWatchYou;
+    #[GQL\Field(type: 'Boolean!')]
+    #[GQL\IsPublic("hasRole('KGB')")]
+    protected bool $kgbWatchYou;
 }

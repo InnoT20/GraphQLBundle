@@ -231,6 +231,8 @@ abstract class MetadataParserTest extends TestCase
     {
         $this->expect('PlanetInput', 'input-object', [
             'description' => 'Planet Input type description',
+            'fieldsDefaultPublic' => '@=isAuthenticated()',
+            'fieldsDefaultAccess' => '@=isAuthenticated()',
             'fields' => [
                 'name' => ['type' => 'String!'],
                 'population' => ['type' => 'Int!'],
@@ -238,6 +240,7 @@ abstract class MetadataParserTest extends TestCase
                 'diameter' => ['type' => 'Int'],
                 'variable' => ['type' => 'Int!'],
                 'tags' => ['type' => '[String]!'],
+                'kgbWatchYou' => ['type' => 'Boolean!', 'public' => "@=hasRole('KGB')"]
             ],
         ]);
     }

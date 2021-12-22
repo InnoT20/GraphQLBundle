@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\Config;
 
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
+use Symfony\Component\Config\Definition\Builder\NodeDefinition;
+
 use function is_string;
 
 class InputObjectTypeDefinition extends TypeDefinition
@@ -52,18 +54,14 @@ class InputObjectTypeDefinition extends TypeDefinition
         return $node;
     }
 
-    protected function accessSection()
+    protected function accessSection(): NodeDefinition
     {
-        $node = self::createNode('access', 'scalar')->info('Access control to field (expression language can be used here)');
-
-        return $node;
+        return self::createNode('access', 'scalar')->info('Access control to field (expression language can be used here)');
     }
 
-    protected function publicSection()
+    protected function publicSection(): NodeDefinition
     {
-        $node = self::createNode('public', 'scalar')->info('Visibility control to field (expression language can be used here)');
-
-        return $node;
+        return self::createNode('public', 'scalar')->info('Visibility control to field (expression language can be used here)');
     }
 
     /**

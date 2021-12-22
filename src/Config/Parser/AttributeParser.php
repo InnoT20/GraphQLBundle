@@ -29,6 +29,6 @@ class AttributeParser extends MetadataParser
         }
 
         // @phpstan-ignore-next-line
-        return array_map(fn (ReflectionAttribute $attribute) => $attribute->newInstance(), $attributes);
+        return array_map(static fn (ReflectionAttribute $attribute) => $attribute->newInstance(), $attributes);
     }
 }

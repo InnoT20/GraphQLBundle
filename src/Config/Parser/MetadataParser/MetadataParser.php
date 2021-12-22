@@ -14,6 +14,7 @@ use Overblog\GraphQLBundle\Config\Parser\MetadataParser\TypeGuesser\TypeHintType
 use Overblog\GraphQLBundle\Config\Parser\PreParserInterface;
 use Overblog\GraphQLBundle\Relay\Connection\ConnectionInterface;
 use Overblog\GraphQLBundle\Relay\Connection\EdgeInterface;
+use Overblog\GraphQLBundle\Tests\Config\Parser\fixtures\annotations\Input\Planet;
 use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionException;
@@ -25,6 +26,7 @@ use SplFileInfo;
 use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
+
 use function array_filter;
 use function array_keys;
 use function array_map;
@@ -63,7 +65,13 @@ abstract class MetadataParser implements PreParserInterface
      * @see https://facebook.github.io/graphql/draft/#sec-Input-and-Output-Types
      */
     private const VALID_INPUT_TYPES = [self::GQL_SCALAR, self::GQL_ENUM, self::GQL_INPUT];
-    private const VALID_OUTPUT_TYPES = [self::GQL_SCALAR, self::GQL_TYPE, self::GQL_INTERFACE, self::GQL_UNION, self::GQL_ENUM];
+    private const VALID_OUTPUT_TYPES = [
+        self::GQL_SCALAR,
+        self::GQL_TYPE,
+        self::GQL_INTERFACE,
+        self::GQL_UNION,
+        self::GQL_ENUM
+    ];
 
     /**
      * {@inheritdoc}
@@ -73,7 +81,10 @@ abstract class MetadataParser implements PreParserInterface
      */
     public static function preParse(SplFileInfo $file, ContainerBuilder $container, array $configs = []): void
     {
-        $container->setParameter('overblog_graphql_types.classes_map', self::processFile($file, $container, $configs, true));
+        $container->setParameter(
+            'overblog_graphql_types.classes_map',
+            self::processFile($file, $container, $configs, true)
+        );
     }
 
     /**
@@ -105,14 +116,18 @@ abstract class MetadataParser implements PreParserInterface
      *
      * @throws InvalidArgumentException|ReflectionException|AnnotationException
      */
-    private static function processFile(SplFileInfo $file, ContainerBuilder $container, array $configs, bool $preProcess): array
-    {
+    private static function processFile(
+        SplFileInfo $file,
+        ContainerBuilder $container,
+        array $configs,
+        bool $preProcess
+    ): array {
         $container->addResource(new FileResource($file->getRealPath()));
 
         try {
             $className = $file->getBasename('.php');
             if (preg_match('#namespace (.+);#', file_get_contents($file->getRealPath()), $matches)) {
-                $className = trim($matches[1]).'\\'.$className;
+                $className = trim($matches[1]) . '\\' . $className;
             }
 
             $gqlTypes = [];
@@ -133,7 +148,11 @@ abstract class MetadataParser implements PreParserInterface
 
             return $preProcess ? self::$map->toArray() : $gqlTypes;
         } catch (\InvalidArgumentException $e) {
-            throw new InvalidArgumentException(sprintf('Failed to parse GraphQL metadata from file "%s".', $file), $e->getCode(), $e);
+            throw new InvalidArgumentException(
+                sprintf('Failed to parse GraphQL metadata from file "%s".', $file),
+                $e->getCode(),
+                $e
+            );
         }
     }
 
@@ -154,25 +173,45 @@ abstract class MetadataParser implements PreParserInterface
                 $gqlType = self::GQL_TYPE;
                 $gqlName = $classMetadata->name ?? $reflectionClass->getShortName();
                 if (!$preProcess) {
-                    $gqlConfiguration = self::typeMetadataToGQLConfiguration($reflectionClass, $classMetadata, $gqlName, $configs);
+                    $gqlConfiguration = self::typeMetadataToGQLConfiguration(
+                        $reflectionClass,
+                        $classMetadata,
+                        $gqlName,
+                        $configs
+                    );
 
                     if ($classMetadata instanceof Metadata\Relay\Connection) {
                         if (!$reflectionClass->implementsInterface(ConnectionInterface::class)) {
-                            throw new InvalidArgumentException(sprintf('The metadata %s on class "%s" can only be used on class implementing the ConnectionInterface.', self::formatMetadata('Connection'), $reflectionClass->getName()));
+                            throw new InvalidArgumentException(
+                                sprintf(
+                                    'The metadata %s on class "%s" can only be used on class implementing the ConnectionInterface.',
+                                    self::formatMetadata('Connection'),
+                                    $reflectionClass->getName()
+                                )
+                            );
                         }
 
                         if (!(isset($classMetadata->edge) xor isset($classMetadata->node))) {
-                            throw new InvalidArgumentException(sprintf('The metadata %s on class "%s" is invalid. You must define either the "edge" OR the "node" attribute, but not both.', self::formatMetadata('Connection'), $reflectionClass->getName()));
+                            throw new InvalidArgumentException(
+                                sprintf(
+                                    'The metadata %s on class "%s" is invalid. You must define either the "edge" OR the "node" attribute, but not both.',
+                                    self::formatMetadata('Connection'),
+                                    $reflectionClass->getName()
+                                )
+                            );
                         }
 
                         $edgeType = $classMetadata->edge ?? false;
                         if (!$edgeType) {
-                            $edgeType = $gqlName.'Edge';
+                            $edgeType = $gqlName . 'Edge';
                             $gqlTypes[$edgeType] = [
                                 'type' => 'object',
                                 'config' => [
                                     'builders' => [
-                                        ['builder' => 'relay-edge', 'builderConfig' => ['nodeType' => $classMetadata->node]],
+                                        [
+                                            'builder' => 'relay-edge',
+                                            'builderConfig' => ['nodeType' => $classMetadata->node]
+                                        ],
                                     ],
                                 ],
                             ];
@@ -182,7 +221,10 @@ abstract class MetadataParser implements PreParserInterface
                             $gqlConfiguration['config']['builders'] = [];
                         }
 
-                        array_unshift($gqlConfiguration['config']['builders'], ['builder' => 'relay-connection', 'builderConfig' => ['edgeType' => $edgeType]]);
+                        array_unshift(
+                            $gqlConfiguration['config']['builders'],
+                            ['builder' => 'relay-connection', 'builderConfig' => ['edgeType' => $edgeType]]
+                        );
                     }
                 }
                 break;
@@ -238,7 +280,13 @@ abstract class MetadataParser implements PreParserInterface
 
             if ($preProcess) {
                 if (self::$map->hasType($gqlName)) {
-                    throw new InvalidArgumentException(sprintf('The GraphQL type "%s" has already been registered in class "%s"', $gqlName, self::$map->getType($gqlName)['class']));
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'The GraphQL type "%s" has already been registered in class "%s"',
+                            $gqlName,
+                            self::$map->getType($gqlName)['class']
+                        )
+                    );
                 }
                 self::$map->addClassType($gqlName, $reflectionClass->getName(), $gqlType);
             } else {
@@ -268,7 +316,9 @@ abstract class MetadataParser implements PreParserInterface
     ): array {
         $isMutation = $isDefault = $isRoot = false;
         if (isset($configs['definitions']['schema'])) {
-            $defaultSchemaName = isset($configs['definitions']['schema']['default']) ? 'default' : array_key_first($configs['definitions']['schema']);
+            $defaultSchemaName = isset($configs['definitions']['schema']['default']) ? 'default' : array_key_first(
+                $configs['definitions']['schema']
+            );
             foreach ($configs['definitions']['schema'] as $schemaName => $schema) {
                 $schemaQuery = $schema['query'] ?? null;
                 $schemaMutation = $schema['mutation'] ?? null;
@@ -288,21 +338,38 @@ abstract class MetadataParser implements PreParserInterface
             }
         }
 
-        $currentValue = $isRoot ? sprintf("service('%s')", self::formatNamespaceForExpression($reflectionClass->getName())) : 'value';
+        $currentValue = $isRoot ? sprintf(
+            "service('%s')",
+            self::formatNamespaceForExpression($reflectionClass->getName())
+        ) : 'value';
 
         $gqlConfiguration = self::graphQLTypeConfigFromAnnotation($reflectionClass, $classMetadata, $currentValue);
 
-        $providerFields = self::getGraphQLFieldsFromProviders($reflectionClass, $isMutation ? Metadata\Mutation::class : Metadata\Query::class, $gqlName, $isDefault);
+        $providerFields = self::getGraphQLFieldsFromProviders(
+            $reflectionClass,
+            $isMutation ? Metadata\Mutation::class : Metadata\Query::class,
+            $gqlName,
+            $isDefault
+        );
         $gqlConfiguration['config']['fields'] = array_merge($gqlConfiguration['config']['fields'], $providerFields);
 
         if ($classMetadata instanceof Metadata\Relay\Edge) {
             if (!$reflectionClass->implementsInterface(EdgeInterface::class)) {
-                throw new InvalidArgumentException(sprintf('The metadata %s on class "%s" can only be used on class implementing the EdgeInterface.', self::formatMetadata('Edge'), $reflectionClass->getName()));
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'The metadata %s on class "%s" can only be used on class implementing the EdgeInterface.',
+                        self::formatMetadata('Edge'),
+                        $reflectionClass->getName()
+                    )
+                );
             }
             if (!isset($gqlConfiguration['config']['builders'])) {
                 $gqlConfiguration['config']['builders'] = [];
             }
-            array_unshift($gqlConfiguration['config']['builders'], ['builder' => 'relay-edge', 'builderConfig' => ['nodeType' => $classMetadata->node]]);
+            array_unshift(
+                $gqlConfiguration['config']['builders'],
+                ['builder' => 'relay-edge', 'builderConfig' => ['nodeType' => $classMetadata->node]]
+            );
         }
 
         return $gqlConfiguration;
@@ -311,13 +378,26 @@ abstract class MetadataParser implements PreParserInterface
     /**
      * @return array{type: 'relay-mutation-payload'|'object', config: array}
      */
-    private static function graphQLTypeConfigFromAnnotation(ReflectionClass $reflectionClass, Metadata\Type $typeAnnotation, string $currentValue): array
-    {
+    private static function graphQLTypeConfigFromAnnotation(
+        ReflectionClass $reflectionClass,
+        Metadata\Type $typeAnnotation,
+        string $currentValue
+    ): array {
         $typeConfiguration = [];
         $metadatas = static::getMetadatas($reflectionClass);
 
-        $fieldsFromProperties = self::getGraphQLTypeFieldsFromAnnotations($reflectionClass, self::getClassProperties($reflectionClass), Metadata\Field::class, $currentValue);
-        $fieldsFromMethods = self::getGraphQLTypeFieldsFromAnnotations($reflectionClass, $reflectionClass->getMethods(), Metadata\Field::class, $currentValue);
+        $fieldsFromProperties = self::getGraphQLTypeFieldsFromAnnotations(
+            $reflectionClass,
+            self::getClassProperties($reflectionClass),
+            Metadata\Field::class,
+            $currentValue
+        );
+        $fieldsFromMethods = self::getGraphQLTypeFieldsFromAnnotations(
+            $reflectionClass,
+            $reflectionClass->getMethods(),
+            Metadata\Field::class,
+            $currentValue
+        );
 
         $typeConfiguration['fields'] = array_merge($fieldsFromProperties, $fieldsFromMethods);
         $typeConfiguration = self::getDescriptionConfiguration($metadatas) + $typeConfiguration;
@@ -325,16 +405,20 @@ abstract class MetadataParser implements PreParserInterface
         if (!empty($typeAnnotation->interfaces)) {
             $typeConfiguration['interfaces'] = $typeAnnotation->interfaces;
         } else {
-            $interfaces = array_keys(self::$map->searchClassesMapBy(function ($gqlType, $configuration) use ($reflectionClass) {
-                ['class' => $interfaceClassName] = $configuration;
+            $interfaces = array_keys(
+                self::$map->searchClassesMapBy(function ($gqlType, $configuration) use ($reflectionClass) {
+                    ['class' => $interfaceClassName] = $configuration;
 
-                $interfaceMetadata = self::getClassReflection($interfaceClassName);
-                if ($interfaceMetadata->isInterface() && $reflectionClass->implementsInterface($interfaceMetadata->getName())) {
-                    return true;
-                }
+                    $interfaceMetadata = self::getClassReflection($interfaceClassName);
+                    if ($interfaceMetadata->isInterface() && $reflectionClass->implementsInterface(
+                            $interfaceMetadata->getName()
+                        )) {
+                        return true;
+                    }
 
-                return $reflectionClass->isSubclassOf($interfaceClassName);
-            }, self::GQL_INTERFACE));
+                    return $reflectionClass->isSubclassOf($interfaceClassName);
+                }, self::GQL_INTERFACE)
+            );
 
             sort($interfaces);
             $typeConfiguration['interfaces'] = $interfaces;
@@ -344,9 +428,18 @@ abstract class MetadataParser implements PreParserInterface
             $typeConfiguration['resolveField'] = self::formatExpression($typeAnnotation->resolveField);
         }
 
-        $buildersAnnotations = array_merge(self::getMetadataMatching($metadatas, Metadata\FieldsBuilder::class), $typeAnnotation->builders);
+        $buildersAnnotations = array_merge(
+            self::getMetadataMatching($metadatas, Metadata\FieldsBuilder::class),
+            $typeAnnotation->builders
+        );
         if (!empty($buildersAnnotations)) {
-            $typeConfiguration['builders'] = array_map(fn ($fieldsBuilderAnnotation) => ['builder' => $fieldsBuilderAnnotation->name, 'builderConfig' => $fieldsBuilderAnnotation->config], $buildersAnnotations);
+            $typeConfiguration['builders'] = array_map(
+                fn($fieldsBuilderAnnotation) => [
+                    'builder' => $fieldsBuilderAnnotation->name,
+                    'builderConfig' => $fieldsBuilderAnnotation->config
+                ],
+                $buildersAnnotations
+            );
         }
 
         if (isset($typeAnnotation->isTypeOf)) {
@@ -363,7 +456,10 @@ abstract class MetadataParser implements PreParserInterface
             $typeConfiguration['fieldsDefaultAccess'] = self::formatExpression($accessMetadata->value);
         }
 
-        return ['type' => $typeAnnotation->isRelay ? 'relay-mutation-payload' : 'object', 'config' => $typeConfiguration];
+        return [
+            'type' => $typeAnnotation->isRelay ? 'relay-mutation-payload' : 'object',
+            'config' => $typeConfiguration
+        ];
     }
 
     /**
@@ -371,15 +467,25 @@ abstract class MetadataParser implements PreParserInterface
      *
      * @return array{type: 'interface', config: array}
      */
-    private static function typeInterfaceMetadataToGQLConfiguration(ReflectionClass $reflectionClass, Metadata\TypeInterface $interfaceAnnotation): array
-    {
+    private static function typeInterfaceMetadataToGQLConfiguration(
+        ReflectionClass $reflectionClass,
+        Metadata\TypeInterface $interfaceAnnotation
+    ): array {
         $interfaceConfiguration = [];
 
-        $fieldsFromProperties = self::getGraphQLTypeFieldsFromAnnotations($reflectionClass, self::getClassProperties($reflectionClass));
-        $fieldsFromMethods = self::getGraphQLTypeFieldsFromAnnotations($reflectionClass, $reflectionClass->getMethods());
+        $fieldsFromProperties = self::getGraphQLTypeFieldsFromAnnotations(
+            $reflectionClass,
+            self::getClassProperties($reflectionClass)
+        );
+        $fieldsFromMethods = self::getGraphQLTypeFieldsFromAnnotations(
+            $reflectionClass,
+            $reflectionClass->getMethods()
+        );
 
         $interfaceConfiguration['fields'] = array_merge($fieldsFromProperties, $fieldsFromMethods);
-        $interfaceConfiguration = self::getDescriptionConfiguration(static::getMetadatas($reflectionClass)) + $interfaceConfiguration;
+        $interfaceConfiguration = self::getDescriptionConfiguration(
+                static::getMetadatas($reflectionClass)
+            ) + $interfaceConfiguration;
 
         $interfaceConfiguration['resolveType'] = self::formatExpression($interfaceAnnotation->resolveType);
 
@@ -391,13 +497,33 @@ abstract class MetadataParser implements PreParserInterface
      *
      * @return array{type: 'relay-mutation-input'|'input-object', config: array}
      */
-    private static function inputMetadataToGQLConfiguration(ReflectionClass $reflectionClass, Metadata\Input $inputAnnotation): array
-    {
-        $inputConfiguration = array_merge([
-            'fields' => self::getGraphQLInputFieldsFromMetadatas($reflectionClass, self::getClassProperties($reflectionClass)),
-        ], self::getDescriptionConfiguration(static::getMetadatas($reflectionClass)));
+    private static function inputMetadataToGQLConfiguration(
+        ReflectionClass $reflectionClass,
+        Metadata\Input $inputAnnotation
+    ): array {
+        $metadatas = static::getMetadatas($reflectionClass);
 
-        return ['type' => $inputAnnotation->isRelay ? 'relay-mutation-input' : 'input-object', 'config' => $inputConfiguration];
+        $inputConfiguration = array_merge([
+            'fields' => self::getGraphQLInputFieldsFromMetadatas(
+                $reflectionClass,
+                self::getClassProperties($reflectionClass)
+            ),
+        ], self::getDescriptionConfiguration($metadatas));
+
+        $publicMetadata = self::getFirstMetadataMatching($metadatas, Metadata\IsPublic::class);
+        if (null !== $publicMetadata) {
+            $inputConfiguration['fieldsDefaultPublic'] = self::formatExpression($publicMetadata->value);
+        }
+
+        $accessMetadata = self::getFirstMetadataMatching($metadatas, Metadata\Access::class);
+        if (null !== $accessMetadata) {
+            $inputConfiguration['fieldsDefaultAccess'] = self::formatExpression($accessMetadata->value);
+        }
+
+        return [
+            'type' => $inputAnnotation->isRelay ? 'relay-mutation-input' : 'input-object',
+            'config' => $inputConfiguration
+        ];
     }
 
     /**
@@ -405,8 +531,10 @@ abstract class MetadataParser implements PreParserInterface
      *
      * @return array{type: 'custom-scalar', config: array}
      */
-    private static function scalarMetadataToGQLConfiguration(ReflectionClass $reflectionClass, Metadata\Scalar $scalarAnnotation): array
-    {
+    private static function scalarMetadataToGQLConfiguration(
+        ReflectionClass $reflectionClass,
+        Metadata\Scalar $scalarAnnotation
+    ): array {
         $scalarConfiguration = [];
 
         if (isset($scalarAnnotation->scalarType)) {
@@ -419,7 +547,9 @@ abstract class MetadataParser implements PreParserInterface
             ];
         }
 
-        $scalarConfiguration = self::getDescriptionConfiguration(static::getMetadatas($reflectionClass)) + $scalarConfiguration;
+        $scalarConfiguration = self::getDescriptionConfiguration(
+                static::getMetadatas($reflectionClass)
+            ) + $scalarConfiguration;
 
         return ['type' => 'custom-scalar', 'config' => $scalarConfiguration];
     }
@@ -429,10 +559,15 @@ abstract class MetadataParser implements PreParserInterface
      *
      * @return array{type: 'enum', config: array}
      */
-    private static function enumMetadataToGQLConfiguration(ReflectionClass $reflectionClass, Metadata\Enum $enumMetadata): array
-    {
+    private static function enumMetadataToGQLConfiguration(
+        ReflectionClass $reflectionClass,
+        Metadata\Enum $enumMetadata
+    ): array {
         $metadatas = static::getMetadatas($reflectionClass);
-        $enumValues = array_merge(self::getMetadataMatching($metadatas, Metadata\EnumValue::class), $enumMetadata->values);
+        $enumValues = array_merge(
+            self::getMetadataMatching($metadatas, Metadata\EnumValue::class),
+            $enumMetadata->values
+        );
 
         $values = [];
 
@@ -440,7 +575,9 @@ abstract class MetadataParser implements PreParserInterface
             $reflectionConstant = new ReflectionClassConstant($reflectionClass->getName(), $name);
             $valueConfig = self::getDescriptionConfiguration(static::getMetadatas($reflectionConstant), true);
 
-            $enumValueAnnotation = current(array_filter($enumValues, fn ($enumValueAnnotation) => $enumValueAnnotation->name === $name));
+            $enumValueAnnotation = current(
+                array_filter($enumValues, fn($enumValueAnnotation) => $enumValueAnnotation->name === $name)
+            );
             $valueConfig['value'] = $value;
 
             if (false !== $enumValueAnnotation) {
@@ -457,7 +594,9 @@ abstract class MetadataParser implements PreParserInterface
         }
 
         $enumConfiguration = ['values' => $values];
-        $enumConfiguration = self::getDescriptionConfiguration(static::getMetadatas($reflectionClass)) + $enumConfiguration;
+        $enumConfiguration = self::getDescriptionConfiguration(
+                static::getMetadatas($reflectionClass)
+            ) + $enumConfiguration;
 
         return ['type' => 'enum', 'config' => $enumConfiguration];
     }
@@ -467,27 +606,35 @@ abstract class MetadataParser implements PreParserInterface
      *
      * @return array{type: 'union', config: array}
      */
-    private static function unionMetadataToGQLConfiguration(ReflectionClass $reflectionClass, Metadata\Union $unionMetadata): array
-    {
+    private static function unionMetadataToGQLConfiguration(
+        ReflectionClass $reflectionClass,
+        Metadata\Union $unionMetadata
+    ): array {
         $unionConfiguration = [];
         if (!empty($unionMetadata->types)) {
             $unionConfiguration['types'] = $unionMetadata->types;
         } else {
-            $types = array_keys(self::$map->searchClassesMapBy(function ($gqlType, $configuration) use ($reflectionClass) {
-                $typeClassName = $configuration['class'];
-                $typeMetadata = self::getClassReflection($typeClassName);
+            $types = array_keys(
+                self::$map->searchClassesMapBy(function ($gqlType, $configuration) use ($reflectionClass) {
+                    $typeClassName = $configuration['class'];
+                    $typeMetadata = self::getClassReflection($typeClassName);
 
-                if ($reflectionClass->isInterface() && $typeMetadata->implementsInterface($reflectionClass->getName())) {
-                    return true;
-                }
+                    if ($reflectionClass->isInterface() && $typeMetadata->implementsInterface(
+                            $reflectionClass->getName()
+                        )) {
+                        return true;
+                    }
 
-                return $typeMetadata->isSubclassOf($reflectionClass->getName());
-            }, self::GQL_TYPE));
+                    return $typeMetadata->isSubclassOf($reflectionClass->getName());
+                }, self::GQL_TYPE)
+            );
             sort($types);
             $unionConfiguration['types'] = $types;
         }
 
-        $unionConfiguration = self::getDescriptionConfiguration(static::getMetadatas($reflectionClass)) + $unionConfiguration;
+        $unionConfiguration = self::getDescriptionConfiguration(
+                static::getMetadatas($reflectionClass)
+            ) + $unionConfiguration;
 
         if (isset($unionMetadata->resolveType)) {
             $unionConfiguration['resolveType'] = self::formatExpression($unionMetadata->resolveType);
@@ -495,12 +642,28 @@ abstract class MetadataParser implements PreParserInterface
             if ($reflectionClass->hasMethod('resolveType')) {
                 $method = $reflectionClass->getMethod('resolveType');
                 if ($method->isStatic() && $method->isPublic()) {
-                    $unionConfiguration['resolveType'] = self::formatExpression(sprintf("@=call('%s::%s', [service('overblog_graphql.type_resolver'), value], true)", self::formatNamespaceForExpression($reflectionClass->getName()), 'resolveType'));
+                    $unionConfiguration['resolveType'] = self::formatExpression(
+                        sprintf(
+                            "@=call('%s::%s', [service('overblog_graphql.type_resolver'), value], true)",
+                            self::formatNamespaceForExpression($reflectionClass->getName()),
+                            'resolveType'
+                        )
+                    );
                 } else {
-                    throw new InvalidArgumentException(sprintf('The "resolveType()" method on class must be static and public. Or you must define a "resolveType" attribute on the %s metadata.', self::formatMetadata('Union')));
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'The "resolveType()" method on class must be static and public. Or you must define a "resolveType" attribute on the %s metadata.',
+                            self::formatMetadata('Union')
+                        )
+                    );
                 }
             } else {
-                throw new InvalidArgumentException(sprintf('The metadata %s has no "resolveType" attribute and the related class has no "resolveType()" public static method. You need to define of them.', self::formatMetadata('Union')));
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'The metadata %s has no "resolveType" attribute and the related class has no "resolveType()" public static method. You need to define of them.',
+                        self::formatMetadata('Union')
+                    )
+                );
             }
         }
 
@@ -511,12 +674,16 @@ abstract class MetadataParser implements PreParserInterface
      * @phpstan-param ReflectionMethod|ReflectionProperty $reflector
      * @phpstan-param class-string<Metadata\Field> $fieldMetadataName
      *
+     * @return array<string,array>
      * @throws AnnotationException
      *
-     * @return array<string,array>
      */
-    private static function getTypeFieldConfigurationFromReflector(ReflectionClass $reflectionClass, Reflector $reflector, string $fieldMetadataName, string $currentValue = 'value'): array
-    {
+    private static function getTypeFieldConfigurationFromReflector(
+        ReflectionClass $reflectionClass,
+        Reflector $reflector,
+        string $fieldMetadataName,
+        string $currentValue = 'value'
+    ): array {
         /** @var ReflectionProperty|ReflectionMethod $reflector */
         $metadatas = static::getMetadatas($reflector);
 
@@ -526,14 +693,28 @@ abstract class MetadataParser implements PreParserInterface
 
         if (null === $fieldMetadata) {
             if (null !== $accessMetadata || null !== $publicMetadata) {
-                throw new InvalidArgumentException(sprintf('The metadatas %s and/or %s defined on "%s" are only usable in addition of metadata %s', self::formatMetadata('Access'), self::formatMetadata('Visible'), $reflector->getName(), self::formatMetadata('Field')));
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'The metadatas %s and/or %s defined on "%s" are only usable in addition of metadata %s',
+                        self::formatMetadata('Access'),
+                        self::formatMetadata('Visible'),
+                        $reflector->getName(),
+                        self::formatMetadata('Field')
+                    )
+                );
             }
 
             return [];
         }
 
         if ($reflector instanceof ReflectionMethod && !$reflector->isPublic()) {
-            throw new InvalidArgumentException(sprintf('The metadata %s can only be applied to public method. The method "%s" is not public.', self::formatMetadata('Field'), $reflector->getName()));
+            throw new InvalidArgumentException(
+                sprintf(
+                    'The metadata %s can only be applied to public method. The method "%s" is not public.',
+                    self::formatMetadata('Field'),
+                    $reflector->getName()
+                )
+            );
         }
 
         $fieldName = $reflector->getName();
@@ -576,10 +757,19 @@ abstract class MetadataParser implements PreParserInterface
             $fieldConfiguration['resolve'] = self::formatExpression($fieldMetadata->resolve);
         } else {
             if ($reflector instanceof ReflectionMethod) {
-                $fieldConfiguration['resolve'] = self::formatExpression(sprintf('call(%s.%s, %s)', $currentValue, $reflector->getName(), self::formatArgsForExpression($args)));
+                $fieldConfiguration['resolve'] = self::formatExpression(
+                    sprintf(
+                        'call(%s.%s, %s)',
+                        $currentValue,
+                        $reflector->getName(),
+                        self::formatArgsForExpression($args)
+                    )
+                );
             } else {
                 if ($fieldName !== $reflector->getName() || 'value' !== $currentValue) {
-                    $fieldConfiguration['resolve'] = self::formatExpression(sprintf('%s.%s', $currentValue, $reflector->getName()));
+                    $fieldConfiguration['resolve'] = self::formatExpression(
+                        sprintf('%s.%s', $currentValue, $reflector->getName())
+                    );
                 }
             }
         }
@@ -594,7 +784,13 @@ abstract class MetadataParser implements PreParserInterface
                 [$builder, $builderConfig] = $fieldMetadata->argsBuilder;
                 $fieldConfiguration['argsBuilder'] = ['builder' => $builder, 'config' => $builderConfig];
             } else {
-                throw new InvalidArgumentException(sprintf('The attribute "argsBuilder" on metadata %s defined on "%s" must be a string or an array where first index is the builder name and the second is the config.', static::formatMetadata($fieldMetadataName), $reflector->getName()));
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'The attribute "argsBuilder" on metadata %s defined on "%s" must be a string or an array where first index is the builder name and the second is the config.',
+                        static::formatMetadata($fieldMetadataName),
+                        $reflector->getName()
+                    )
+                );
             }
         }
         $fieldBuilder = self::getFirstMetadataMatching($metadatas, Metadata\FieldBuilder::class);
@@ -610,14 +806,30 @@ abstract class MetadataParser implements PreParserInterface
                 $fieldConfiguration['builder'] = $builder;
                 $fieldConfiguration['builderConfig'] = $builderConfig ?: [];
             } else {
-                throw new InvalidArgumentException(sprintf('The attribute "fieldBuilder" on metadata %s defined on "%s" must be a string or an array where first index is the builder name and the second is the config.', static::formatMetadata($fieldMetadataName), $reflector->getName()));
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'The attribute "fieldBuilder" on metadata %s defined on "%s" must be a string or an array where first index is the builder name and the second is the config.',
+                        static::formatMetadata($fieldMetadataName),
+                        $reflector->getName()
+                    )
+                );
             }
         } else {
             if (!isset($fieldMetadata->type)) {
                 try {
-                    $fieldConfiguration['type'] = self::guessType($reflectionClass, $reflector, self::VALID_OUTPUT_TYPES);
+                    $fieldConfiguration['type'] = self::guessType(
+                        $reflectionClass,
+                        $reflector,
+                        self::VALID_OUTPUT_TYPES
+                    );
                 } catch (TypeGuessingException $e) {
-                    $error = sprintf('The attribute "type" on %s is missing on %s "%s" and cannot be auto-guessed from the following type guessers:'."\n%s\n", static::formatMetadata($fieldMetadataName), $reflector instanceof ReflectionProperty ? 'property' : 'method', $reflector->getName(), $e->getMessage());
+                    $error = sprintf(
+                        'The attribute "type" on %s is missing on %s "%s" and cannot be auto-guessed from the following type guessers:' . "\n%s\n",
+                        static::formatMetadata($fieldMetadataName),
+                        $reflector instanceof ReflectionProperty ? 'property' : 'method',
+                        $reflector->getName(),
+                        $e->getMessage()
+                    );
 
                     throw new InvalidArgumentException($error);
                 }
@@ -644,12 +856,14 @@ abstract class MetadataParser implements PreParserInterface
      *
      * @param ReflectionProperty[] $reflectors
      *
+     * @return array<string,array>
      * @throws AnnotationException
      *
-     * @return array<string,array>
      */
-    private static function getGraphQLInputFieldsFromMetadatas(ReflectionClass $reflectionClass, array $reflectors): array
-    {
+    private static function getGraphQLInputFieldsFromMetadatas(
+        ReflectionClass $reflectionClass,
+        array $reflectors
+    ): array {
         $fields = [];
 
         foreach ($reflectors as $reflector) {
@@ -657,6 +871,8 @@ abstract class MetadataParser implements PreParserInterface
 
             /** @var Metadata\Field|null $fieldMetadata */
             $fieldMetadata = self::getFirstMetadataMatching($metadatas, Metadata\Field::class);
+            $accessMetadata = self::getFirstMetadataMatching($metadatas, Metadata\Access::class);
+            $publicMetadata = self::getFirstMetadataMatching($metadatas, Metadata\IsPublic::class);
 
             // No field metadata found
             if (null === $fieldMetadata) {
@@ -675,7 +891,14 @@ abstract class MetadataParser implements PreParserInterface
                 try {
                     $fieldType = self::guessType($reflectionClass, $reflector, self::VALID_INPUT_TYPES);
                 } catch (TypeGuessingException $e) {
-                    throw new InvalidArgumentException(sprintf('The attribute "type" on %s is missing on property "%s" and cannot be auto-guessed from the following type guessers:'."\n%s\n", self::formatMetadata(Metadata\Field::class), $reflector->getName(), $e->getMessage()));
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'The attribute "type" on %s is missing on property "%s" and cannot be auto-guessed from the following type guessers:' . "\n%s\n",
+                            self::formatMetadata(Metadata\Field::class),
+                            $reflector->getName(),
+                            $e->getMessage()
+                        )
+                    );
                 }
             }
             $fieldConfiguration = [];
@@ -684,10 +907,26 @@ abstract class MetadataParser implements PreParserInterface
                 $resolvedType = self::$map->getType($fieldType);
                 // We found a type but it is not allowed
                 if (null !== $resolvedType && !in_array($resolvedType['type'], self::VALID_INPUT_TYPES)) {
-                    throw new InvalidArgumentException(sprintf('The type "%s" on "%s" is a "%s" not valid on an Input %s. Only Input, Scalar and Enum are allowed.', $fieldType, $reflector->getName(), $resolvedType['type'], self::formatMetadata('Field')));
+                    throw new InvalidArgumentException(
+                        sprintf(
+                            'The type "%s" on "%s" is a "%s" not valid on an Input %s. Only Input, Scalar and Enum are allowed.',
+                            $fieldType,
+                            $reflector->getName(),
+                            $resolvedType['type'],
+                            self::formatMetadata('Field')
+                        )
+                    );
                 }
 
                 $fieldConfiguration['type'] = $fieldType;
+            }
+
+            if ($accessMetadata) {
+                $fieldConfiguration['access'] = self::formatExpression($accessMetadata->value);
+            }
+
+            if ($publicMetadata) {
+                $fieldConfiguration['public'] = self::formatExpression($publicMetadata->value);
             }
 
             $fieldConfiguration = array_merge(self::getDescriptionConfiguration($metadatas, true), $fieldConfiguration);
@@ -706,15 +945,24 @@ abstract class MetadataParser implements PreParserInterface
      *
      * @throws AnnotationException
      */
-    private static function getGraphQLTypeFieldsFromAnnotations(ReflectionClass $reflectionClass, array $reflectors, string $fieldMetadataName = Metadata\Field::class, string $currentValue = 'value'): array
-    {
+    private static function getGraphQLTypeFieldsFromAnnotations(
+        ReflectionClass $reflectionClass,
+        array $reflectors,
+        string $fieldMetadataName = Metadata\Field::class,
+        string $currentValue = 'value'
+    ): array {
         $fields = [];
 
         foreach ($reflectors as $reflector) {
-            $fields = array_merge($fields, self::getTypeFieldConfigurationFromReflector($reflectionClass, $reflector, $fieldMetadataName, $currentValue));
+            $fields[] = self::getTypeFieldConfigurationFromReflector(
+                $reflectionClass,
+                $reflector,
+                $fieldMetadataName,
+                $currentValue
+            );
         }
 
-        return $fields;
+        return array_merge(...$fields);
     }
 
     /**
@@ -725,22 +973,35 @@ abstract class MetadataParser implements PreParserInterface
      *
      * @return array<string,array>
      */
-    private static function getGraphQLFieldsFromProviders(ReflectionClass $reflectionClass, string $expectedMetadata, string $targetType, bool $isDefaultTarget = false): array
-    {
+    private static function getGraphQLFieldsFromProviders(
+        ReflectionClass $reflectionClass,
+        string $expectedMetadata,
+        string $targetType,
+        bool $isDefaultTarget = false
+    ): array {
         $fields = [];
         foreach (self::$providers as ['reflectionClass' => $providerReflection, 'metadata' => $providerMetadata]) {
-            $defaultAccessAnnotation = self::getFirstMetadataMatching(static::getMetadatas($providerReflection), Metadata\Access::class);
-            $defaultIsPublicAnnotation = self::getFirstMetadataMatching(static::getMetadatas($providerReflection), Metadata\IsPublic::class);
+            $defaultAccessAnnotation = self::getFirstMetadataMatching(
+                static::getMetadatas($providerReflection),
+                Metadata\Access::class
+            );
+            $defaultIsPublicAnnotation = self::getFirstMetadataMatching(
+                static::getMetadatas($providerReflection),
+                Metadata\IsPublic::class
+            );
 
             $defaultAccess = $defaultAccessAnnotation ? self::formatExpression($defaultAccessAnnotation->value) : false;
-            $defaultIsPublic = $defaultIsPublicAnnotation ? self::formatExpression($defaultIsPublicAnnotation->value) : false;
+            $defaultIsPublic = $defaultIsPublicAnnotation ? self::formatExpression(
+                $defaultIsPublicAnnotation->value
+            ) : false;
 
             $methods = [];
             // First found the methods matching the targeted type
             foreach ($providerReflection->getMethods() as $method) {
                 $metadatas = static::getMetadatas($method);
 
-                $metadata = self::getFirstMetadataMatching($metadatas, [Metadata\Mutation::class, Metadata\Query::class]);
+                $metadata = self::getFirstMetadataMatching($metadatas, [Metadata\Mutation::class, Metadata\Query::class]
+                );
                 if (null === $metadata) {
                     continue;
                 }
@@ -773,9 +1034,23 @@ abstract class MetadataParser implements PreParserInterface
 
                 if (!$metadata instanceof $expectedMetadata) {
                     if (Metadata\Mutation::class === $expectedMetadata) {
-                        $message = sprintf('The provider "%s" try to add a query field on type "%s" (through %s on method "%s") but "%s" is a mutation.', $providerReflection->getName(), $targetType, self::formatMetadata('Query'), $method->getName(), $targetType);
+                        $message = sprintf(
+                            'The provider "%s" try to add a query field on type "%s" (through %s on method "%s") but "%s" is a mutation.',
+                            $providerReflection->getName(),
+                            $targetType,
+                            self::formatMetadata('Query'),
+                            $method->getName(),
+                            $targetType
+                        );
                     } else {
-                        $message = sprintf('The provider "%s" try to add a mutation on type "%s" (through %s on method "%s") but "%s" is not a mutation.', $providerReflection->getName(), $targetType, self::formatMetadata('Mutation'), $method->getName(), $targetType);
+                        $message = sprintf(
+                            'The provider "%s" try to add a mutation on type "%s" (through %s on method "%s") but "%s" is not a mutation.',
+                            $providerReflection->getName(),
+                            $targetType,
+                            self::formatMetadata('Mutation'),
+                            $method->getName(),
+                            $targetType
+                        );
                     }
 
                     throw new InvalidArgumentException($message);
@@ -783,8 +1058,16 @@ abstract class MetadataParser implements PreParserInterface
                 $methods[$method->getName()] = $method;
             }
 
-            $currentValue = sprintf("service('%s')", self::formatNamespaceForExpression($providerReflection->getName()));
-            $providerFields = self::getGraphQLTypeFieldsFromAnnotations($reflectionClass, $methods, $expectedMetadata, $currentValue);
+            $currentValue = sprintf(
+                "service('%s')",
+                self::formatNamespaceForExpression($providerReflection->getName())
+            );
+            $providerFields = self::getGraphQLTypeFieldsFromAnnotations(
+                $reflectionClass,
+                $methods,
+                $expectedMetadata,
+                $currentValue
+            );
             foreach ($providerFields as $fieldName => $fieldConfig) {
                 if (isset($providerMetadata->prefix)) {
                     $fieldName = sprintf('%s%s', $providerMetadata->prefix, $fieldName);
@@ -911,8 +1194,11 @@ abstract class MetadataParser implements PreParserInterface
      *
      * @throws RuntimeException
      */
-    private static function guessType(ReflectionClass $reflectionClass, Reflector $reflector, array $filterGraphQLTypes = []): string
-    {
+    private static function guessType(
+        ReflectionClass $reflectionClass,
+        Reflector $reflector,
+        array $filterGraphQLTypes = []
+    ): string {
         $errors = [];
         foreach (self::$typeGuessers as $typeGuesser) {
             if (!$typeGuesser->supports($reflector)) {
@@ -940,7 +1226,15 @@ abstract class MetadataParser implements PreParserInterface
             try {
                 $gqlType = self::guessType($reflectionClass, $parameter, self::VALID_INPUT_TYPES);
             } catch (TypeGuessingException $exception) {
-                throw new InvalidArgumentException(sprintf('Argument n°%s "$%s" on method "%s" cannot be auto-guessed from the following type guessers:'."\n%s\n", $index + 1, $parameter->getName(), $method->getName(), $exception->getMessage()));
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'Argument n°%s "$%s" on method "%s" cannot be auto-guessed from the following type guessers:' . "\n%s\n",
+                        $index + 1,
+                        $parameter->getName(),
+                        $method->getName(),
+                        $exception->getMessage()
+                    )
+                );
             }
 
             $argumentConfig = [];
