@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Tests\ExpressionLanguage\ExpressionFunction\Security;
 
-use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\Security\GetUser;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 use Overblog\GraphQLBundle\Security\Security;
 use Overblog\GraphQLBundle\Tests\ExpressionLanguage\TestCase;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Security as CoreSecurity;
+use Symfony\Component\Security\Core\User\InMemoryUser;
 use Symfony\Component\Security\Core\User\User;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -23,26 +24,32 @@ class GetUserTest extends TestCase
 
     public function testEvaluator(): void
     {
-        $testUser = new User('testUser', 'testPassword');
+        if (class_exists(InMemoryUser::class)) {
+            $testUser = new InMemoryUser('testUser', 'testPassword');
+        } else {
+            $testUser = new User('testUser', 'testPassword');
+        }
         $coreSecurity = $this->createMock(CoreSecurity::class);
         $coreSecurity->method('getUser')->willReturn($testUser);
-        $globalVariable = new GlobalVariables(['security' => new Security($coreSecurity)]);
+        $services = $this->createGraphQLServices(['security' => new Security($coreSecurity)]);
 
-        $user = $this->expressionLanguage->evaluate('getUser()', ['globalVariable' => $globalVariable]);
+        $user = $this->expressionLanguage->evaluate('getUser()', [TypeGenerator::GRAPHQL_SERVICES => $services]);
         $this->assertInstanceOf(UserInterface::class, $user);
     }
 
     public function testGetUserNoTokenStorage(): void
     {
-        $globalVariable = new GlobalVariables(['security' => new Security($this->createMock(CoreSecurity::class))]);
-        $globalVariable->get('security');
+        ${TypeGenerator::GRAPHQL_SERVICES} = $this->createGraphQLServices(
+            ['security' => new Security($this->createMock(CoreSecurity::class))]
+        );
+        ${TypeGenerator::GRAPHQL_SERVICES}->get('security');
         $this->assertNull(eval($this->getCompileCode()));
     }
 
     public function testGetUserNoToken(): void
     {
         $tokenStorage = $this->getMockBuilder(TokenStorageInterface::class)->getMock();
-        $globalVariable = new GlobalVariables(
+        ${TypeGenerator::GRAPHQL_SERVICES} = $this->createGraphQLServices(
             [
                 'security' => new Security(
                     new CoreSecurity(
@@ -51,7 +58,7 @@ class GetUserTest extends TestCase
                 ),
             ]
         );
-        $globalVariable->get('security');
+        ${TypeGenerator::GRAPHQL_SERVICES}->get('security');
 
         $this->getDIContainerMock(['security.token_storage' => $tokenStorage]);
         $this->assertNull(eval($this->getCompileCode()));
@@ -60,14 +67,15 @@ class GetUserTest extends TestCase
     /**
      * @dataProvider getUserProvider
      *
-     * @param $user
-     * @param $expectedUser
+     * @param mixed $user
+     * @param mixed $expectedUser
      */
     public function testGetUser($user, $expectedUser): void
     {
         $tokenStorage = $this->getMockBuilder(TokenStorageInterface::class)->getMock();
         $token = $this->getMockBuilder(TokenInterface::class)->getMock();
-        $globalVariable = new GlobalVariables(
+
+        ${TypeGenerator::GRAPHQL_SERVICES} = $this->createGraphQLServices(
             [
                 'security' => new Security(
                     new CoreSecurity(
@@ -76,7 +84,7 @@ class GetUserTest extends TestCase
                 ),
             ]
         );
-        $globalVariable->get('security');
+        ${TypeGenerator::GRAPHQL_SERVICES}->get('security');
 
         $token
             ->expects($this->once())
@@ -90,7 +98,7 @@ class GetUserTest extends TestCase
         $this->assertSame($expectedUser, eval($this->getCompileCode()));
     }
 
-    public function getUserProvider()
+    public function getUserProvider(): array
     {
         $user = $this->getMockBuilder(UserInterface::class)->getMock();
 
@@ -103,7 +111,7 @@ class GetUserTest extends TestCase
         ];
     }
 
-    private function getCompileCode()
+    private function getCompileCode(): string
     {
         return 'return '.$this->expressionLanguage->compile('getUser()').';';
     }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Relay\Connection;
 
-use Overblog\GraphQLBundle\Relay\Connection\Output\PageInfo;
+use GraphQL\Executor\Promise\Promise;
 
 interface ConnectionInterface
 {
@@ -20,7 +20,7 @@ interface ConnectionInterface
      *
      * @param iterable|EdgeInterface[] $edges
      */
-    public function setEdges(iterable $edges);
+    public function setEdges(iterable $edges): void;
 
     /**
      * Get the page info.
@@ -31,22 +31,20 @@ interface ConnectionInterface
 
     /**
      * Set the page info.
-     *
-     * @param PageInfoInterface $pageInfo
      */
-    public function setPageInfo(PageInfoInterface $pageInfo);
+    public function setPageInfo(PageInfoInterface $pageInfo): void;
 
     /**
-     * Get the total count.
+     * Get the total count or promise that returns the total count.
      *
-     * @return int
+     * @return int|Promise|null
      */
-    public function getTotalCount(): ?int;
+    public function getTotalCount();
 
     /**
-     * Set the total count.
+     * Set the total count or promise that returns the total count.
      *
-     * @param int $totalCount
+     * @param int|Promise $totalCount
      */
-    public function setTotalCount(int $totalCount);
+    public function setTotalCount($totalCount): void;
 }

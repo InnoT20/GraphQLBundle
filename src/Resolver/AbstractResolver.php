@@ -4,42 +4,27 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Resolver;
 
+use function array_keys;
+
 abstract class AbstractResolver implements FluentResolverInterface
 {
-    /** @var array */
-    private $solutions = [];
+    private array $solutions = [];
+    private array $aliases = [];
+    private array $solutionOptions = [];
+    private array $fullyLoadedSolutions = [];
 
-    private $aliases = [];
-
-    /** @var array */
-    private $solutionOptions = [];
-
-    /** @var array */
-    private $fullyLoadedSolutions = [];
-
-    public function addSolution(string $id, $solutionOrFactory, array $aliases = [], array $options = [])
+    public function addSolution(string $id, callable $factory, array $aliases = [], array $options = []): self
     {
         $this->fullyLoadedSolutions[$id] = false;
         $this->addAliases($id, $aliases);
 
-        $this->solutions[$id] = function () use ($id, $solutionOrFactory) {
-            $solution = $solutionOrFactory;
-            if (self::isSolutionFactory($solutionOrFactory)) {
-                if (!isset($solutionOrFactory[1])) {
-                    $solutionOrFactory[1] = [];
-                }
-                $solution = \call_user_func_array(...$solutionOrFactory);
-            }
-            $this->checkSolution($id, $solution);
-
-            return $solution;
-        };
+        $this->solutions[$id] = $factory;
         $this->solutionOptions[$id] = $options;
 
         return $this;
     }
 
-    public function hasSolution(string $id)
+    public function hasSolution(string $id): bool
     {
         $id = $this->resolveAlias($id);
 
@@ -47,8 +32,6 @@ abstract class AbstractResolver implements FluentResolverInterface
     }
 
     /**
-     * @param $id
-     *
      * @return mixed
      */
     public function getSolution(string $id)
@@ -56,38 +39,39 @@ abstract class AbstractResolver implements FluentResolverInterface
         return $this->loadSolution($id);
     }
 
-    /**
-     * @return array
-     */
     public function getSolutions(): array
     {
         return $this->loadSolutions();
     }
 
-    public function getSolutionAliases(string $id)
+    public function getSolutionAliases(string $id): array
     {
-        return \array_keys($this->aliases, $id);
+        return array_keys($this->aliases, $id);
+    }
+
+    public function getAliases(): array
+    {
+        return $this->aliases;
     }
 
     /**
-     * @param $id
-     *
      * @return mixed
      */
     public function getSolutionOptions(string $id)
     {
         $id = $this->resolveAlias($id);
 
-        return isset($this->solutionOptions[$id]) ? $this->solutionOptions[$id] : [];
+        return $this->solutionOptions[$id] ?? [];
     }
 
+    /**
+     * @param mixed $solution
+     */
     protected function onLoadSolution($solution): void
     {
     }
 
     /**
-     * @param string $id
-     *
      * @return mixed
      */
     private function loadSolution(string $id)
@@ -116,14 +100,9 @@ abstract class AbstractResolver implements FluentResolverInterface
         }
     }
 
-    private static function isSolutionFactory($solutionOrFactory)
+    private function resolveAlias(string $alias): string
     {
-        return \is_array($solutionOrFactory) && isset($solutionOrFactory[0]) && \is_callable($solutionOrFactory[0]);
-    }
-
-    private function resolveAlias(string $alias)
-    {
-        return isset($this->aliases[$alias]) ? $this->aliases[$alias] : $alias;
+        return $this->aliases[$alias] ?? $alias;
     }
 
     /**
@@ -136,36 +115,5 @@ abstract class AbstractResolver implements FluentResolverInterface
         }
 
         return $this->solutions;
-    }
-
-    /**
-     * @param mixed $solution
-     *
-     * @return bool
-     */
-    protected function supportsSolution($solution): bool
-    {
-        $supportedClass = $this->supportedSolutionClass();
-
-        return  null === $supportedClass || $solution instanceof $supportedClass;
-    }
-
-    protected function checkSolution(string $id, $solution): void
-    {
-        if (!$this->supportsSolution($solution)) {
-            throw new UnsupportedResolverException(
-                \sprintf('Resolver "%s" must be "%s" "%s" given.', $id, $this->supportedSolutionClass(), \get_class($solution))
-            );
-        }
-    }
-
-    /**
-     * default return null to accept mixed type.
-     *
-     * @return string|null supported class name
-     */
-    protected function supportedSolutionClass(): ?string
-    {
-        return null;
     }
 }

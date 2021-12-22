@@ -9,17 +9,10 @@ use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
 
 class CompileCacheWarmer implements CacheWarmerInterface
 {
-    private $typeGenerator;
+    private TypeGenerator $typeGenerator;
+    private bool $compiled;
 
-    private $compiled;
-
-    /**
-     * CompileCacheWarmer constructor.
-     *
-     * @param TypeGenerator $typeGenerator
-     * @param bool          $compiled
-     */
-    public function __construct(TypeGenerator $typeGenerator, $compiled = true)
+    public function __construct(TypeGenerator $typeGenerator, bool $compiled = true)
     {
         $this->typeGenerator = $typeGenerator;
         $this->compiled = $compiled;
@@ -28,24 +21,33 @@ class CompileCacheWarmer implements CacheWarmerInterface
     /**
      * {@inheritdoc}
      */
-    public function isOptional()
+    public function isOptional(): bool
     {
         return !$this->compiled;
     }
 
     /**
-     * {@inheritdoc}
+     * @param string $cacheDir
+     *
+     * @return string[]
      */
-    public function warmUp($cacheDir): void
+    public function warmUp($cacheDir)
     {
         if ($this->compiled) {
-            // use warm up cache dir if type generator cache dir not already explicitly declare
-            $baseCacheDir = $this->typeGenerator->getBaseCacheDir();
-            if (null === $this->typeGenerator->getCacheDir(false)) {
-                $this->typeGenerator->setBaseCacheDir($cacheDir);
+            // use warm up cache dir if type generator cache dir not already explicitly declared
+            $cacheBaseDir = $this->typeGenerator->getCacheBaseDir();
+
+            if (null === $this->typeGenerator->getCacheDir()) {
+                $this->typeGenerator->setCacheBaseDir($cacheDir);
             }
+
             $this->typeGenerator->compile(TypeGenerator::MODE_WRITE | TypeGenerator::MODE_OVERRIDE);
-            $this->typeGenerator->setBaseCacheDir($baseCacheDir);
+
+            if (null !== $cacheBaseDir) {
+                $this->typeGenerator->setCacheBaseDir($cacheBaseDir);
+            }
         }
+
+        return [];
     }
 }

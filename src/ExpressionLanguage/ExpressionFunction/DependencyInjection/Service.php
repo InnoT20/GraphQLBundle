@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\DependencyInjection;
 
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 
 final class Service extends ExpressionFunction
 {
@@ -12,12 +13,8 @@ final class Service extends ExpressionFunction
     {
         parent::__construct(
             $name,
-            static function (string $serviceId): string {
-                return "\$globalVariable->get('container')->get($serviceId)";
-            },
-            static function ($arguments, $serviceId): ?object {
-                return $arguments['globalVariable']->get('container')->get($serviceId);
-            }
+            fn (string $serviceId) => "$this->gqlServices->get('container')->get($serviceId)",
+            static fn (array $arguments, $serviceId) => $arguments[TypeGenerator::GRAPHQL_SERVICES]->get('container')->get($serviceId)
         );
     }
 }

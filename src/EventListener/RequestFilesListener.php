@@ -10,8 +10,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 final class RequestFilesListener
 {
-    /** @var RequestStack */
-    private $requestStack;
+    private RequestStack $requestStack;
 
     public function __construct(RequestStack $requestStack)
     {
@@ -27,6 +26,7 @@ final class RequestFilesListener
         }
 
         $context = $event->getExecutorContext();
+        $context['request'] = $request;
         $context['request_files'] = $request->files;
     }
 }

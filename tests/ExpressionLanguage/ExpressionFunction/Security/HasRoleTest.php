@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Tests\ExpressionLanguage\ExpressionFunction\Security;
 
-use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\Security\HasRole;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 use Overblog\GraphQLBundle\Tests\ExpressionLanguage\TestCase;
 
 class HasRoleTest extends TestCase
@@ -21,9 +21,9 @@ class HasRoleTest extends TestCase
             'ROLE_USER',
             $this->any()
         );
-        $globalVariable = new GlobalVariables(['security' => $security]);
+        $services = $this->createGraphQLServices(['security' => $security]);
 
-        $hasRole = $this->expressionLanguage->evaluate('hasRole("ROLE_USER")', ['globalVariable' => $globalVariable]);
+        $hasRole = $this->expressionLanguage->evaluate('hasRole("ROLE_USER")', [TypeGenerator::GRAPHQL_SERVICES => $services]);
         $this->assertTrue($hasRole);
     }
 

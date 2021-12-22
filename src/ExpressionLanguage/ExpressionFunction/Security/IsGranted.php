@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\Security;
 
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 
 final class IsGranted extends ExpressionFunction
 {
@@ -12,12 +13,8 @@ final class IsGranted extends ExpressionFunction
     {
         parent::__construct(
             'isGranted',
-            static function ($attributes, $object = 'null'): string {
-                return \sprintf('$globalVariable->get(\'security\')->isGranted(%s, %s)', $attributes, $object);
-            },
-            static function ($arguments, $attributes, $object = null): bool {
-                return $arguments['globalVariable']->get('security')->isGranted($attributes, $object);
-            }
+            fn ($attributes, $object = 'null') => "$this->gqlServices->get('security')->isGranted($attributes, $object)",
+            static fn (array $arguments, $attributes, $object = null) => $arguments[TypeGenerator::GRAPHQL_SERVICES]->get('security')->isGranted($attributes, $object)
         );
     }
 }

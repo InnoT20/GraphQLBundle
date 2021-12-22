@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\Security;
 
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 
 final class HasAnyPermission extends ExpressionFunction
 {
@@ -12,12 +13,8 @@ final class HasAnyPermission extends ExpressionFunction
     {
         parent::__construct(
             'hasAnyPermission',
-            static function ($object, $permissions): string {
-                return \sprintf('$globalVariable->get(\'security\')->hasAnyPermission(%s, %s)', $object, $permissions);
-            },
-            static function ($arguments, $object, $permissions): bool {
-                return $arguments['globalVariable']->get('security')->hasAnyPermission($object, $permissions);
-            }
+            fn ($object, $permissions) => "$this->gqlServices->get('security')->hasAnyPermission($object, $permissions)",
+            static fn (array $arguments, $object, $permissions) => $arguments[TypeGenerator::GRAPHQL_SERVICES]->get('security')->hasAnyPermission($object, $permissions)
         );
     }
 }

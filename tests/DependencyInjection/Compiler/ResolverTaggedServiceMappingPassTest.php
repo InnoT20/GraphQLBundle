@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Tests\DependencyInjection\Compiler;
 
-use Overblog\GraphQLBundle\DependencyInjection\Compiler\ResolverTaggedServiceMappingPass;
-use Overblog\GraphQLBundle\Resolver\ResolverResolver;
+use InvalidArgumentException;
+use Overblog\GraphQLBundle\DependencyInjection\Compiler\QueryTaggedServiceMappingPass;
+use Overblog\GraphQLBundle\Resolver\QueryResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -20,14 +21,14 @@ class ResolverTaggedServiceMappingPassTest extends TestCase
         $container = new ContainerBuilder();
         $container->setDefinition('injected_service', new Definition(FakeInjectedService::class));
 
-        $container->register('overblog_graphql.resolver_resolver', ResolverResolver::class);
+        $container->register('overblog_graphql.query_resolver', QueryResolver::class);
 
         $this->container = $container;
     }
 
     private function addCompilerPassesAndCompile(): void
     {
-        $this->container->addCompilerPass(new ResolverTaggedServiceMappingPass());
+        $this->container->addCompilerPass(new QueryTaggedServiceMappingPass());
         $this->container->addCompilerPass(new FakeCompilerPass());
         $this->container->compile();
     }
@@ -39,7 +40,8 @@ class ResolverTaggedServiceMappingPassTest extends TestCase
     {
         $testResolver = new Definition(ResolverTestService::class);
         $testResolver
-            ->addTag('overblog_graphql.resolver', [
+            ->setPublic(true)
+            ->addTag('overblog_graphql.query', [
                 'alias' => 'test_resolver', 'method' => 'doSomethingWithContainer',
             ]);
 
@@ -54,13 +56,13 @@ class ResolverTaggedServiceMappingPassTest extends TestCase
     {
         $testResolver = new Definition(ResolverTestService::class);
         $testResolver
-            ->addTag('overblog_graphql.resolver', [
+            ->addTag('overblog_graphql.query', [
                 'alias' => false, 'method' => 'doSomethingWithContainer',
             ]);
 
         $this->container->setDefinition('test_resolver', $testResolver);
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Service tagged "test_resolver" must have valid "alias" argument.');
 
         $this->addCompilerPassesAndCompile();
@@ -70,13 +72,13 @@ class ResolverTaggedServiceMappingPassTest extends TestCase
     {
         $testResolver = new Definition(ResolverTestService::class);
         $testResolver
-            ->addTag('overblog_graphql.resolver', [
+            ->addTag('overblog_graphql.query', [
                 'alias' => 'test_resolver', 'method' => false,
             ]);
 
         $this->container->setDefinition('test_resolver', $testResolver);
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Service tagged "test_resolver" must have valid "method" argument.');
 
         $this->addCompilerPassesAndCompile();

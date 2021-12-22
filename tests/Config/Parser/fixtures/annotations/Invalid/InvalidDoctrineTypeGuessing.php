@@ -10,11 +10,15 @@ use Overblog\GraphQLBundle\Annotation as GQL;
 /**
  * @GQL\Type
  */
+#[GQL\Type]
 class InvalidDoctrineTypeGuessing
 {
     /**
      * @ORM\Column(type="invalidType")
      * @GQL\Field
+     *
+     * @var mixed
      */
+    #[GQL\Field]
     protected $myRelation;
 }

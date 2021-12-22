@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Tests\ExpressionLanguage\ExpressionFunction\Security;
 
-use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\Security\HasPermission;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 use Overblog\GraphQLBundle\Tests\ExpressionLanguage\TestCase;
+use stdClass;
 
 class HasPermissionTest extends TestCase
 {
-    private $testedExpression = 'hasPermission(object,"OWNER")';
+    private string $testedExpression = 'hasPermission(object,"OWNER")';
 
     protected function getFunctions()
     {
@@ -19,7 +20,7 @@ class HasPermissionTest extends TestCase
 
     public function testEvaluator(): void
     {
-        $expectedObject = new \stdClass();
+        $expectedObject = new stdClass();
         $security = $this->getSecurityIsGrantedWithExpectation(
             [
                 'OWNER',
@@ -27,12 +28,12 @@ class HasPermissionTest extends TestCase
             ],
             $this->any()
         );
-        $globalVariable = new GlobalVariables(['security' => $security]);
+        $services = $this->createGraphQLServices(['security' => $security]);
 
         $hasPermission = $this->expressionLanguage->evaluate(
             $this->testedExpression,
             [
-                'globalVariable' => $globalVariable,
+                TypeGenerator::GRAPHQL_SERVICES => $services,
                 'object' => $expectedObject,
             ]
         );
@@ -41,7 +42,7 @@ class HasPermissionTest extends TestCase
 
     public function testHasPermission(): void
     {
-        $expectedObject = new \stdClass();
+        $expectedObject = new stdClass();
         $this->assertExpressionCompile(
             $this->testedExpression,
             [

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Relay\Connection\Output;
 
+use GraphQL\Executor\Promise\Promise;
 use Overblog\GraphQLBundle\Relay\Connection\ConnectionInterface;
 use Overblog\GraphQLBundle\Relay\Connection\EdgeInterface;
 use Overblog\GraphQLBundle\Relay\Connection\PageInfoInterface;
@@ -13,15 +14,14 @@ class Connection implements ConnectionInterface
     use DeprecatedPropertyPublicAccessTrait;
 
     /** @var EdgeInterface[] */
-    protected $edges;
+    protected array $edges;
 
-    /** @var PageInfoInterface */
-    protected $pageInfo;
+    protected ?PageInfoInterface $pageInfo;
 
-    /** @var int|null */
-    protected $totalCount;
+    /** @var int|Promise|null Total count or promise that returns the total count */
+    protected $totalCount = null;
 
-    public function __construct($edges = [], PageInfoInterface $pageInfo = null)
+    public function __construct(array $edges = [], PageInfoInterface $pageInfo = null)
     {
         $this->edges = $edges;
         $this->pageInfo = $pageInfo;
@@ -30,7 +30,7 @@ class Connection implements ConnectionInterface
     /**
      * {@inheritdoc}
      */
-    public function getEdges()
+    public function getEdges(): array
     {
         return $this->edges;
     }
@@ -46,7 +46,7 @@ class Connection implements ConnectionInterface
     /**
      * {@inheritdoc}
      */
-    public function getPageInfo(): ? PageInfoInterface
+    public function getPageInfo(): ?PageInfoInterface
     {
         return $this->pageInfo;
     }
@@ -62,7 +62,7 @@ class Connection implements ConnectionInterface
     /**
      * {@inheritdoc}
      */
-    public function getTotalCount(): ?int
+    public function getTotalCount()
     {
         return $this->totalCount;
     }
@@ -70,7 +70,7 @@ class Connection implements ConnectionInterface
     /**
      * {@inheritdoc}
      */
-    public function setTotalCount(int $totalCount): void
+    public function setTotalCount($totalCount): void
     {
         $this->totalCount = $totalCount;
     }

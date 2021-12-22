@@ -6,23 +6,21 @@ namespace Overblog\GraphQLBundle\Definition\Builder;
 
 use GraphQL\Type\Definition\Type;
 use Overblog\GraphQLBundle\Definition\ConfigProcessor;
-use Overblog\GraphQLBundle\Definition\GlobalVariables;
+use Overblog\GraphQLBundle\Definition\GraphQLServices;
 
 final class TypeFactory
 {
-    /** @var ConfigProcessor */
-    private $configProcessor;
-    /** @var GlobalVariables */
-    private $globalVariables;
+    private ConfigProcessor $configProcessor;
+    private GraphQLServices $graphQLServices;
 
-    public function __construct(ConfigProcessor $configProcessor, GlobalVariables $globalVariables)
+    public function __construct(ConfigProcessor $configProcessor, GraphQLServices $graphQLServices)
     {
         $this->configProcessor = $configProcessor;
-        $this->globalVariables = $globalVariables;
+        $this->graphQLServices = $graphQLServices;
     }
 
     public function create(string $class): Type
     {
-        return new $class($this->configProcessor, $this->globalVariables);
+        return new $class($this->configProcessor, $this->graphQLServices);
     }
 }

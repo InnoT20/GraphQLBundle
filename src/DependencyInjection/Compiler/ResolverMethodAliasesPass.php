@@ -6,7 +6,11 @@ namespace Overblog\GraphQLBundle\DependencyInjection\Compiler;
 
 use Overblog\GraphQLBundle\Definition\Resolver\AliasedInterface;
 use Overblog\GraphQLBundle\Definition\Resolver\MutationInterface;
+use Overblog\GraphQLBundle\Definition\Resolver\QueryInterface;
 use Overblog\GraphQLBundle\Definition\Resolver\ResolverInterface;
+use ReflectionClass;
+use ReflectionException;
+use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -15,6 +19,7 @@ final class ResolverMethodAliasesPass implements CompilerPassInterface
 {
     private const SERVICE_SUBCLASS_TAG_MAPPING = [
         MutationInterface::class => 'overblog_graphql.mutation',
+        QueryInterface::class => 'overblog_graphql.query',
         ResolverInterface::class => 'overblog_graphql.resolver',
     ];
 
@@ -30,15 +35,18 @@ final class ResolverMethodAliasesPass implements CompilerPassInterface
         }
     }
 
+    /**
+     * @throws ReflectionException
+     */
     private function addDefinitionTagsFromClassReflection(Definition $definition, string $tagName): void
     {
         if ($definition->hasTag($tagName)) {
             foreach ($definition->getTag($tagName) as $tag => $attributes) {
                 if (!isset($attributes['method'])) {
-                    $reflectionClass = new \ReflectionClass($definition->getClass());
+                    $reflectionClass = new ReflectionClass($definition->getClass()); // @phpstan-ignore-line
 
                     if (!$reflectionClass->isAbstract()) {
-                        $publicReflectionMethods = $reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC);
+                        $publicReflectionMethods = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
                         $isAliased = $reflectionClass->implementsInterface(AliasedInterface::class);
                         foreach ($publicReflectionMethods as $publicReflectionMethod) {
                             if ('__construct' === $publicReflectionMethod->name || $isAliased && 'getAliases' === $publicReflectionMethod->name) {

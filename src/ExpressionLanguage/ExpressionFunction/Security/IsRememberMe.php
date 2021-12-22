@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\Security;
 
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 
 final class IsRememberMe extends ExpressionFunction
 {
@@ -12,12 +13,8 @@ final class IsRememberMe extends ExpressionFunction
     {
         parent::__construct(
             'isRememberMe',
-            static function (): string {
-                return '$globalVariable->get(\'security\')->isRememberMe()';
-            },
-            static function ($arguments): bool {
-                return $arguments['globalVariable']->get('security')->isRememberMe();
-            }
+            fn () => "$this->gqlServices->get('security')->isRememberMe()",
+            static fn (array $arguments) => $arguments[TypeGenerator::GRAPHQL_SERVICES]->get('security')->isRememberMe()
         );
     }
 }

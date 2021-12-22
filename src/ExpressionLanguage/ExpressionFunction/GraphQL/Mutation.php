@@ -8,12 +8,16 @@ use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction;
 
 final class Mutation extends ExpressionFunction
 {
-    public function __construct($name = 'mutation')
+    public const NAME = 'mutation';
+
+    public function __construct($name = self::NAME)
     {
         parent::__construct(
             $name,
-            function ($alias, $args = '[]') {
-                return "\$globalVariable->get('mutationResolver')->resolve([$alias, $args])";
+            function (string $alias, ...$args) {
+                $args = count($args) > 0 ? ', '.implode(', ', $args) : '';
+
+                return "$this->gqlServices->mutation({$alias}{$args})";
             }
         );
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\Security;
 
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 
 final class IsAnonymous extends ExpressionFunction
 {
@@ -12,12 +13,8 @@ final class IsAnonymous extends ExpressionFunction
     {
         parent::__construct(
             'isAnonymous',
-            static function (): string {
-                return '$globalVariable->get(\'security\')->isAnonymous()';
-            },
-            static function ($arguments): bool {
-                return $arguments['globalVariable']->get('security')->isAnonymous();
-            }
+            fn () => "$this->gqlServices->get('security')->isAnonymous()",
+            static fn (array $arguments) => $arguments[TypeGenerator::GRAPHQL_SERVICES]->get('security')->isAnonymous()
         );
     }
 }

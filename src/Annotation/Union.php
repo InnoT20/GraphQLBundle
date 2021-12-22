@@ -4,34 +4,43 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Annotation;
 
+use Attribute;
+use Doctrine\Common\Annotations\Annotation\NamedArgumentConstructor;
+
 /**
  * Annotation for GraphQL union.
  *
  * @Annotation
+ * @NamedArgumentConstructor
  * @Target("CLASS")
  */
-final class Union implements Annotation
+#[Attribute(Attribute::TARGET_CLASS)]
+final class Union extends Annotation
 {
     /**
      * Union name.
-     *
-     * @var string
      */
-    public $name;
+    public ?string $name;
 
     /**
      * Union types.
-     *
-     * @Required
-     *
-     * @var array<string>
      */
-    public $types;
+    public array $types = [];
 
     /**
      * Resolver type for union.
-     *
-     * @var string
      */
-    public $resolveType;
+    public ?string $resolveType;
+
+    /**
+     * @param string|null $name        The GraphQL name of the union
+     * @param string[]    $types       List of types included in the union
+     * @param string|null $resolveType The resolve type expression
+     */
+    public function __construct(string $name = null, array $types = [], ?string $resolveType = null)
+    {
+        $this->name = $name;
+        $this->types = $types;
+        $this->resolveType = $resolveType;
+    }
 }

@@ -35,7 +35,7 @@ Example:
 
 See: `Overblog\GraphQLBundle\Relay\Connection\Paginator`
 
-The purpose if this helper is to provide an easy way to paginate in a data set provided by a backend.
+The purpose of this helper is to provide an easy way to paginate in a data set provided by a backend.
 
 When constructing the paginator, you need to pass a callable which will be responsible for providing the sliced data set.
 
@@ -203,7 +203,7 @@ You should get the 4 last items of the _data set_.
 #### Within a resolver
 
 ````yaml
-resolve: '@=resolver("App\\GraphQL\\Resolver\\Greetings::sayHello", [args])'
+resolve: '@=query("App\\GraphQL\\Resolver\\Greetings::sayHello", args)'
 ````
 
 ````
@@ -224,10 +224,10 @@ sayHello(first: 1, after: "YXJyYXljb25uZWN0aW9uOjI="){ # after: base64_encode('a
 namespace App\GraphQL\Resolver;
 
 use Overblog\GraphQLBundle\Definition\Argument;
-use Overblog\GraphQLBundle\Definition\Resolver\ResolverInterface;
+use Overblog\GraphQLBundle\Definition\Resolver\QueryInterface;
 use Overblog\GraphQLBundle\Relay\Connection\Paginator;
 
-class Greetings implements ResolverInterface
+class Greetings implements QueryInterface
 {
     public function sayHello(Argument $args)
     {
@@ -269,18 +269,22 @@ Sometimes, you want to add fields to your Connection or Edges. In order to do so
 
 ```php
 use Overblog\GraphQLBundle\Relay\Connection\ConnectionBuilder;
+use Overblog\GraphQLBundle\Relay\Connection\Cursor\Base64CursorEncoder;
 
 public function resolveSomething(Argument $args)
 {
-    $connectionBuilder = new ConnectionBuilder( 
+    $connectionBuilder = new ConnectionBuilder(
+        new Base64CursorEncoder(),
         function(iterable $edges, PageInfo $pageInfo) : FriendsConnection {
-            $connection = new FriendsConnection($edges, $pageInfo)
+            $connection = new FriendsConnection($edges, $pageInfo);
             $connection->setAverageAge(calculateAverage($edges));
+
             return $connection;
         },
-        function(string $cursor, UserFriend $entity, int $index):FriendEdge {
+        function(string $cursor, UserFriend $entity, int $index): FriendEdge {
             $edge = new FriendEdge($cursor, $entity->getUser());
             $edge->setFriendshipTime($entity->getCreatedAt());
+
             return $edge;
         }
     );
@@ -291,7 +295,7 @@ public function resolveSomething(Argument $args)
 }
 ```
 
-The `ConnectionBuilder` constructor accepts two parameters. The first one is a callback to build the Connection object, and the second one is a callback to build an Edge object.  
+The `ConnectionBuilder` constructor accepts three parameters. The first one is an encoder that will be used to encode the cursor of the edges, the second is a callback to build the Connection object and the last one is a callback to build an Edge object.
 
 The connection callback will be call with the following parameters :
 

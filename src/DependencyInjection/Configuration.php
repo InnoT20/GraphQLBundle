@@ -20,35 +20,34 @@ use Symfony\Component\Config\Definition\Builder\ScalarNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\HttpKernel\Kernel;
+use function array_keys;
+use function is_array;
+use function is_int;
+use function is_numeric;
+use function is_string;
+use function sprintf;
 
 class Configuration implements ConfigurationInterface
 {
     public const NAME = 'overblog_graphql';
 
-    /** bool */
-    private $debug;
-
-    /** null|string */
-    private $cacheDir;
+    private bool $debug;
 
     /**
-     * Constructor.
-     *
-     * @param bool        $debug    Whether to use the debug mode
-     * @param string|null $cacheDir
+     * @param bool $debug Whether to use the debug mode
      */
-    public function __construct(bool $debug, string $cacheDir = null)
+    public function __construct(bool $debug)
     {
-        $this->debug = (bool) $debug;
-        $this->cacheDir = $cacheDir;
+        $this->debug = $debug;
     }
 
-    public function getConfigTreeBuilder()
+    public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder(self::NAME);
 
-        $rootNode = self::getRootNodeWithoutDeprecation($treeBuilder, self::NAME);
+        $rootNode = $treeBuilder->getRootNode();
 
+        // @phpstan-ignore-next-line
         $rootNode
             ->children()
                 ->append($this->batchingMethodSection())
@@ -57,16 +56,18 @@ class Configuration implements ConfigurationInterface
                 ->append($this->servicesSection())
                 ->append($this->securitySection())
                 ->append($this->doctrineSection())
+                ->append($this->profilerSection())
             ->end();
 
         return $treeBuilder;
     }
 
-    private function batchingMethodSection()
+    private function batchingMethodSection(): EnumNodeDefinition
     {
         $builder = new TreeBuilder('batching_method', 'enum');
+
         /** @var EnumNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, 'batching_method', 'enum');
+        $node = $builder->getRootNode();
 
         $node
             ->values(['relay', 'apollo'])
@@ -76,11 +77,14 @@ class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    private function errorsHandlerSection()
+    private function errorsHandlerSection(): ArrayNodeDefinition
     {
         $builder = new TreeBuilder('errors_handler');
+
         /** @var ArrayNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, 'errors_handler');
+        $node = $builder->getRootNode();
+
+        // @phpstan-ignore-next-line
         $node
             ->treatFalseLike(['enabled' => false])
             ->treatTrueLike(['enabled' => true])
@@ -111,11 +115,13 @@ class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    private function definitionsSection()
+    private function definitionsSection(): ArrayNodeDefinition
     {
         $builder = new TreeBuilder('definitions');
         /** @var ArrayNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, 'definitions');
+        $node = $builder->getRootNode();
+
+        // @phpstan-ignore-next-line
         $node
             ->addDefaultsIfNotSet()
             ->children()
@@ -145,11 +151,14 @@ class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    private function servicesSection()
+    private function servicesSection(): ArrayNodeDefinition
     {
         $builder = new TreeBuilder('services');
+
         /** @var ArrayNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, 'services');
+        $node = $builder->getRootNode();
+
+        // @phpstan-ignore-next-line
         $node
             ->addDefaultsIfNotSet()
             ->children()
@@ -169,11 +178,14 @@ class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    private function securitySection()
+    private function securitySection(): ArrayNodeDefinition
     {
         $builder = new TreeBuilder('security');
+
         /** @var ArrayNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, 'security');
+        $node = $builder->getRootNode();
+
+        // @phpstan-ignore-next-line
         $node
             ->addDefaultsIfNotSet()
             ->children()
@@ -187,19 +199,28 @@ class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    private function definitionsSchemaSection()
+    private function definitionsSchemaSection(): ArrayNodeDefinition
     {
         $builder = new TreeBuilder('schema');
+
         /** @var ArrayNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, 'schema');
+        $node = $builder->getRootNode();
+
+        if (Kernel::VERSION_ID >= 50100) {
+            $deprecatedArgs = [
+                'overblog/graphql-bundle',
+                '0.13',
+                'The "%path%.%node%" configuration is deprecated and will be removed in 1.0. Add the "overblog_graphql.resolver_map" tag to the services instead.',
+            ];
+        } else {
+            $deprecatedArgs = ['The "%path%.%node%" configuration is deprecated since version 0.13 and will be removed in 1.0. Add the "overblog_graphql.resolver_map" tag to the services instead.'];
+        }
+
+        // @phpstan-ignore-next-line
         $node
             ->beforeNormalization()
-                ->ifTrue(function ($v) {
-                    return isset($v['query']) && \is_string($v['query']) || isset($v['mutation']) && \is_string($v['mutation']);
-                })
-                ->then(function ($v) {
-                    return ['default' => $v];
-                })
+                ->ifTrue(fn ($v) => isset($v['query']) && is_string($v['query']) || isset($v['mutation']) && is_string($v['mutation']))
+                ->then(fn ($v) => ['default' => $v])
             ->end()
             ->useAttributeAsKey('name')
             ->prototype('array')
@@ -211,7 +232,7 @@ class Configuration implements ConfigurationInterface
                     ->arrayNode('resolver_maps')
                         ->defaultValue([])
                         ->prototype('scalar')->end()
-                        ->setDeprecated(...$this->getDeprecationArgs())
+                        ->setDeprecated(...$deprecatedArgs)
                     ->end()
                     ->arrayNode('types')
                         ->defaultValue([])
@@ -224,43 +245,32 @@ class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    /**
-     * BC layer for symfony/config <5.1 .
-     */
-    private function getDeprecationArgs()
-    {
-        $msg = 'The "%path%.%node%" configuration is deprecated since version 0.13 and will be removed in 1.0 Add the "overblog_graphql.resolver_map" tag to the services instead.';
-
-        if (Kernel::VERSION_ID < 50100) {
-            return [$msg];
-        }
-
-        return ['overblog/graphql-bundle', '0.13', $msg];
-    }
-
-    private function definitionsMappingsSection()
+    private function definitionsMappingsSection(): ArrayNodeDefinition
     {
         $builder = new TreeBuilder('mappings');
-        $node = self::getRootNodeWithoutDeprecation($builder, 'mappings');
+
+        /** @var ArrayNodeDefinition $node */
+        $node = $builder->getRootNode();
+
+        // @phpstan-ignore-next-line
         $node
             ->children()
                 ->arrayNode('auto_discover')
-                    ->treatFalseLike(['bundles' => false, 'root_dir' => false])
-                    ->treatTrueLike(['bundles' => true, 'root_dir' => true])
-                    ->treatNullLike(['bundles' => true, 'root_dir' => true])
+                    ->treatFalseLike(['bundles' => false, 'root_dir' => false, 'built_in' => true])
+                    ->treatTrueLike(['bundles' => true, 'root_dir' => true, 'built_in' => true])
+                    ->treatNullLike(['bundles' => true, 'root_dir' => true, 'built_in' => true])
                     ->addDefaultsIfNotSet()
                     ->children()
                         ->booleanNode('bundles')->defaultFalse()->end()
                         ->booleanNode('root_dir')->defaultFalse()->end()
+                        ->booleanNode('built_in')->defaultTrue()->end()
                     ->end()
                 ->end()
                 ->arrayNode('types')
                     ->prototype('array')
                         ->addDefaultsIfNotSet()
                         ->beforeNormalization()
-                            ->ifTrue(function ($v) {
-                                return isset($v['type']) && \is_string($v['type']);
-                            })
+                            ->ifTrue(fn ($v) => isset($v['type']) && is_string($v['type']))
                             ->then(function ($v) {
                                 if ('yml' === $v['type']) {
                                     $v['types'] = ['yaml'];
@@ -274,7 +284,7 @@ class Configuration implements ConfigurationInterface
                         ->end()
                         ->children()
                             ->arrayNode('types')
-                                ->prototype('enum')->values(\array_keys(ConfigParserPass::SUPPORTED_TYPES_EXTENSIONS))->isRequired()->end()
+                                ->prototype('enum')->values(array_keys(ConfigParserPass::SUPPORTED_TYPES_EXTENSIONS))->isRequired()->end()
                             ->end()
                             ->scalarNode('dir')->defaultNull()->end()
                             ->scalarNode('suffix')->defaultValue(ConfigParserPass::DEFAULT_TYPES_SUFFIX)->end()
@@ -287,11 +297,14 @@ class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    private function doctrineSection()
+    private function doctrineSection(): ArrayNodeDefinition
     {
         $builder = new TreeBuilder('doctrine');
+
         /** @var ArrayNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, 'doctrine');
+        $node = $builder->getRootNode();
+
+        // @phpstan-ignore-next-line
         $node
             ->addDefaultsIfNotSet()
             ->children()
@@ -305,23 +318,36 @@ class Configuration implements ConfigurationInterface
         return $node;
     }
 
-    /**
-     * @param string $name
-     *
-     * @return ArrayNodeDefinition
-     */
-    private function builderSection($name)
+    private function profilerSection(): ArrayNodeDefinition
+    {
+        $builder = new TreeBuilder('profiler');
+
+        /** @var ArrayNodeDefinition $node */
+        $node = $builder->getRootNode();
+
+        // @phpstan-ignore-next-line
+        $node
+            ->addDefaultsIfNotSet()
+            ->children()
+                ->scalarNode('query_match')->defaultNull()->end()
+            ->end()
+        ;
+
+        return $node;
+    }
+
+    private function builderSection(string $name): ArrayNodeDefinition
     {
         $builder = new TreeBuilder($name);
+
         /** @var ArrayNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, $name);
+        $node = $builder->getRootNode();
+
         $node->beforeNormalization()
-            ->ifTrue(function ($v) {
-                return \is_array($v) && !empty($v);
-            })
+            ->ifTrue(fn ($v) => is_array($v) && !empty($v))
             ->then(function ($v) {
                 foreach ($v as $key => &$config) {
-                    if (\is_string($config)) {
+                    if (is_string($config)) {
                         $config = [
                             'alias' => $key,
                             'class' => $config,
@@ -333,6 +359,7 @@ class Configuration implements ConfigurationInterface
             })
         ->end();
 
+        // @phpstan-ignore-next-line
         $node->prototype('array')
             ->children()
                 ->scalarNode('alias')->isRequired()->end()
@@ -345,59 +372,33 @@ class Configuration implements ConfigurationInterface
     }
 
     /**
-     * @param string $name
-     * @param bool   $disabledValue
-     *
-     * @return ScalarNodeDefinition
+     * @param mixed $disabledValue
      */
-    private function securityQuerySection($name, $disabledValue)
+    private function securityQuerySection(string $name, $disabledValue): ScalarNodeDefinition
     {
         $builder = new TreeBuilder($name, 'scalar');
+
         /** @var ScalarNodeDefinition $node */
-        $node = self::getRootNodeWithoutDeprecation($builder, $name, 'scalar');
+        $node = $builder->getRootNode();
+
         $node->beforeNormalization()
-                ->ifTrue(function ($v) {
-                    return \is_string($v) && \is_numeric($v);
-                })
-                ->then(function ($v) {
-                    return (int) $v;
-                })
+                ->ifTrue(fn ($v) => is_string($v) && is_numeric($v))
+                ->then(fn ($v) => (int) $v)
             ->end();
 
         $node
             ->info('Disabled if equal to false.')
             ->beforeNormalization()
-                ->ifTrue(function ($v) {
-                    return false === $v;
-                })
-                ->then(function () use ($disabledValue) {
-                    return $disabledValue;
-                })
+                ->ifTrue(fn ($v) => false === $v)
+                ->then(fn () => $disabledValue)
             ->end()
             ->defaultValue($disabledValue)
             ->validate()
-                ->ifTrue(function ($v) {
-                    return \is_int($v) && $v < 0;
-                })
-                ->thenInvalid(\sprintf('"%s.security.%s" must be greater or equal to 0.', self::NAME, $name))
+                ->ifTrue(fn ($v) => is_int($v) && $v < 0)
+                ->thenInvalid(sprintf('"%s.security.%s" must be greater or equal to 0.', self::NAME, $name))
             ->end()
         ;
 
         return $node;
-    }
-
-    /**
-     * @internal
-     *
-     * @param TreeBuilder $builder
-     * @param string|null $name
-     * @param string      $type
-     *
-     * @return ArrayNodeDefinition|\Symfony\Component\Config\Definition\Builder\NodeDefinition
-     */
-    public static function getRootNodeWithoutDeprecation(TreeBuilder $builder, string $name, string $type = 'array')
-    {
-        // BC layer for symfony/config 4.1 and older
-        return \method_exists($builder, 'getRootNode') ? $builder->getRootNode() : $builder->root($name, $type);
     }
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Tests\ExpressionLanguage\ExpressionFunction\Security;
 
-use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\Security\IsGranted;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 use Overblog\GraphQLBundle\Tests\ExpressionLanguage\TestCase;
 
 class IsGrantedTest extends TestCase
@@ -21,10 +21,10 @@ class IsGrantedTest extends TestCase
             $this->matchesRegularExpression('/^ROLE_(USER|ADMIN)$/'),
             $this->any()
         );
-        $globalVariable = new GlobalVariables(['security' => $security]);
+        $gqlServices = $this->createGraphQLServices(['security' => $security]);
 
         $this->assertTrue(
-            $this->expressionLanguage->evaluate('isGranted("ROLE_USER")', ['globalVariable' => $globalVariable])
+            $this->expressionLanguage->evaluate('isGranted("ROLE_USER")', [TypeGenerator::GRAPHQL_SERVICES => $gqlServices])
         );
     }
 

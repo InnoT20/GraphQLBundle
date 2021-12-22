@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\Security;
 
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 
 final class HasAnyRole extends ExpressionFunction
 {
@@ -12,12 +13,8 @@ final class HasAnyRole extends ExpressionFunction
     {
         parent::__construct(
             'hasAnyRole',
-            static function ($roles): string {
-                return \sprintf('$globalVariable->get(\'security\')->hasAnyRole(%s)', $roles);
-            },
-            static function ($arguments, $roles): bool {
-                return $arguments['globalVariable']->get('security')->hasAnyRole($roles);
-            }
+            fn ($roles) => "$this->gqlServices->get('security')->hasAnyRole($roles)",
+            static fn (array $arguments, $roles) => $arguments[TypeGenerator::GRAPHQL_SERVICES]->get('security')->hasAnyRole($roles)
         );
     }
 }
