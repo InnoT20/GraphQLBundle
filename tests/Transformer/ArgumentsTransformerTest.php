@@ -21,6 +21,7 @@ use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Validator\RecursiveValidator;
+
 use function class_exists;
 use function count;
 use function is_array;
@@ -35,8 +36,10 @@ class ArgumentsTransformerTest extends TestCase
         }
     }
 
-    private function getTransformer(array $classesMap = null, ConstraintViolationList $validateReturn = null): ArgumentsTransformer
-    {
+    private function getTransformer(
+        array $classesMap = null,
+        ConstraintViolationList $validateReturn = null
+    ): ArgumentsTransformer {
         $validator = $this->createMock(RecursiveValidator::class);
         $validator->method('validate')->willReturn($validateReturn ?? new ConstraintViolationList());
 
@@ -68,12 +71,19 @@ class ArgumentsTransformerTest extends TestCase
             'values' => ['op1' => 1, 'op2' => 2, 'op3' => 3],
         ]);
 
+        $t5 = new EnumType([
+            'name' => 'Enum2',
+            'values' => ['op1' => 'val1', 'op2' => 'val2', 'op3' => 'val3'],
+        ]);
+
         $t2 = new InputObjectType([
             'name' => 'InputType2',
             'fields' => [
                 'field1' => Type::listOf($t1),
                 'field2' => $t3,
                 'field3' => Type::nonNull($t3),
+                'field4' => Type::nonNull($t5),
+                'field5' => $t5
             ],
         ]);
 
@@ -84,7 +94,7 @@ class ArgumentsTransformerTest extends TestCase
             ],
         ]);
 
-        return [$t1, $t2, $t3, $t4];
+        return [$t1, $t2, $t3, $t4, $t5];
     }
 
     public function testPopulating(): void
@@ -116,6 +126,7 @@ class ArgumentsTransformerTest extends TestCase
                 ['field1' => 'world2'],
             ],
             'field2' => 3,
+            'field4' => PhpEnum::op2
         ];
 
         $res = $transformer->getInstanceAndValidate('InputType2', $data, $info, 'input2');
@@ -126,6 +137,8 @@ class ArgumentsTransformerTest extends TestCase
         $this->assertArrayHasKey(1, $res->field1);
         $this->assertInstanceOf(InputType1::class, $res->field1[0]);
         $this->assertInstanceOf(InputType1::class, $res->field1[1]);
+        $this->assertEquals(PhpEnum::op2, $res->field4);
+        $this->assertNull($res->field5);
 
         // InputType3
         $data = [
@@ -158,16 +171,27 @@ class ArgumentsTransformerTest extends TestCase
             'InputType1' => ['type' => 'input', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\InputType1'],
             'InputType2' => ['type' => 'input', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\InputType2'],
             'Enum1' => ['type' => 'enum', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\Enum1'],
+            'Enum2' => ['type' => 'enum', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\PhpEnum'],
         ]);
 
         $res = $transformer->getInstanceAndValidate('Enum1', 2, $info, 'enum1');
         $this->assertInstanceOf(Enum1::class, $res);
         $this->assertEquals(2, $res->value);
 
-        $mapping = ['input1' => 'InputType1', 'input2' => 'InputType2', 'enum1' => 'Enum1', 'int1' => 'Int!', 'string1' => 'String!'];
+        $mapping = [
+            'input1' => 'InputType1',
+            'input2' => 'InputType2',
+            'enum1' => 'Enum1',
+            'int1' => 'Int!',
+            'string1' => 'String!'
+        ];
         $data = [
             'input1' => ['field1' => 'hello', 'field2' => 12, 'field3' => true],
-            'input2' => ['field1' => [['field1' => 'hello1'], ['field1' => 'hello2']], 'field2' => 12],
+            'input2' => [
+                'field1' => [['field1' => 'hello1'], ['field1' => 'hello2']],
+                'field2' => 12,
+                'field4' => 'val2'
+            ],
             'enum1' => 2,
             'int1' => 14,
             'string1' => 'test_string',
@@ -185,28 +209,43 @@ class ArgumentsTransformerTest extends TestCase
         $res = $transformer->getInstanceAndValidate('InputType1', $data, $info, 'input1');
         $this->assertInstanceOf(InputType1::class, $res);
 
-        $res = $transformer->getInstanceAndValidate('InputType2', ['field3' => 'enum1'], $info, 'input2');
+        $res = $transformer->getInstanceAndValidate(
+            'InputType2',
+            ['field3' => 'enum1', 'field4' => 'val2'],
+            $info,
+            'input2'
+        );
         $this->assertInstanceOf(Enum1::class, $res->field3);
         $this->assertEquals('enum1', $res->field3->value);
+        $this->assertEquals(PhpEnum::op2, $res->field4);
     }
 
     public function testRaisedErrors(): void
     {
-        $violation = new ConstraintViolation('validation_error', 'validation_error', [], 'invalid', 'field2', 'invalid');
+        $violation = new ConstraintViolation(
+            'validation_error', 'validation_error', [], 'invalid', 'field2', 'invalid'
+        );
         $builder = $this->getTransformer([
             'InputType1' => ['type' => 'input', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\InputType1'],
             'InputType2' => ['type' => 'input', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\InputType2'],
+            'Enum2' => ['type' => 'enum', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\PhpEnum'],
         ], new ConstraintViolationList([$violation]));
 
         $mapping = ['input1' => 'InputType1', 'input2' => 'InputType2'];
         $data = [
             'input1' => ['field1' => 'hello', 'field2' => 12, 'field3' => true],
-            'input2' => ['field1' => [['field1' => 'hello1'], ['field1' => 'hello2']], 'field2' => 12],
+            'input2' => [
+                'field1' => [['field1' => 'hello1'], ['field1' => 'hello2']],
+                'field2' => 12,
+                'field4' => 'val2'
+            ],
         ];
 
         try {
             $res = $builder->getArguments($mapping, $data, $this->getResolveInfo(self::getTypes()));
-            $this->fail("When input data validation fail, it should raise an Overblog\GraphQLBundle\Error\InvalidArgumentsError exception");
+            $this->fail(
+                "When input data validation fail, it should raise an Overblog\GraphQLBundle\Error\InvalidArgumentsError exception"
+            );
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentsError::class, $e);
             $first = $e->getErrors()[0];
@@ -215,16 +254,20 @@ class ArgumentsTransformerTest extends TestCase
             $this->assertEquals($first->getName(), 'input1');
 
             $expected = [
-                'input1' => [[
-                    'path' => 'field2',
-                    'message' => 'validation_error',
-                    'code' => null,
-                ]],
-                'input2' => [[
-                    'path' => 'field2',
-                    'message' => 'validation_error',
-                    'code' => null,
-                ]],
+                'input1' => [
+                    [
+                        'path' => 'field2',
+                        'message' => 'validation_error',
+                        'code' => null,
+                    ]
+                ],
+                'input2' => [
+                    [
+                        'path' => 'field2',
+                        'message' => 'validation_error',
+                        'code' => null,
+                    ]
+                ],
             ];
 
             $this->assertEquals($e->toState(), $expected);
@@ -261,17 +304,26 @@ class ArgumentsTransformerTest extends TestCase
         $builder = new ArgumentsTransformer($validator, [
             'InputType1' => ['type' => 'input', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\InputType1'],
             'InputType2' => ['type' => 'input', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\InputType2'],
+            'Enum2' => ['type' => 'enum', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\PhpEnum'],
         ]);
 
         $mapping = ['input1' => '[InputType1]', 'input2' => '[InputType2]'];
         $data = [
             'input1' => [['field1' => 'hello', 'field2' => 12, 'field3' => true]],
-            'input2' => [['field1' => [['field1' => 'hello1'], ['field1' => 'hello2']], 'field2' => 12]],
+            'input2' => [
+                [
+                    'field1' => [['field1' => 'hello1'], ['field1' => 'hello2']],
+                    'field2' => 12,
+                    'field4' => 'val3'
+                ]
+            ],
         ];
 
         try {
             $res = $builder->getArguments($mapping, $data, $this->getResolveInfo(self::getTypes()));
-            $this->fail("When input data validation fail, it should raise an Overblog\GraphQLBundle\Error\InvalidArgumentsError exception");
+            $this->fail(
+                "When input data validation fail, it should raise an Overblog\GraphQLBundle\Error\InvalidArgumentsError exception"
+            );
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentsError::class, $e);
             /** @var InvalidArgumentsError $e */

@@ -22,10 +22,14 @@
     },
     "config": {
         "bin-dir": "bin",
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "composer/package-versions-deprecated": true,
+            "phpstan/extension-installer": true
+        }
     },
     "require": {
-        "php": "^8.0",
+        "php": "^8.1",
         "ext-json": "*",
         "murtukov/php-code-generator": "^0.1.5",
         "phpdocumentor/reflection-docblock": "^5.2",

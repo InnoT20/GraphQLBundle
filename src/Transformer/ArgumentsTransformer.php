@@ -12,10 +12,12 @@ use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use Overblog\GraphQLBundle\Error\InvalidArgumentError;
 use Overblog\GraphQLBundle\Error\InvalidArgumentsError;
+use Overblog\GraphQLBundle\Util\EnumHelper;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+
 use function array_map;
 use function count;
 use function is_array;
@@ -40,13 +42,12 @@ class ArgumentsTransformer
     /**
      * Get the PHP class for a given type.
      *
-     * @return object|false
+     * @param string $type
+     * @return string<class-string>|false
      */
-    private function getTypeClassInstance(string $type)
+    private function getTypeClassName(string $type): string|false
     {
-        $classname = isset($this->classesMap[$type]) ? $this->classesMap[$type]['class'] : false;
-
-        return $classname ? new $classname() : false;
+        return isset($this->classesMap[$type]) ? $this->classesMap[$type]['class'] : false;
     }
 
     /**
@@ -75,23 +76,32 @@ class ArgumentsTransformer
         }
 
         if ($multiple) {
-            return array_map(fn ($data) => $this->populateObject($type, $data, false, $info), $data);
+            return array_map(fn($data) => $this->populateObject($type, $data, false, $info), $data);
         }
 
         if ($type instanceof EnumType) {
-            $instance = $this->getTypeClassInstance($type->name);
-            if ($instance) {
-                $this->accessor->setValue($instance, 'value', $data);
+            $className = $this->getTypeClassName($type->name);
 
-                return $instance;
-            } else {
+            if ($className === false) {
                 return $data;
             }
+
+            if (is_subclass_of($className, \UnitEnum::class)) {
+                return EnumHelper::buildInstance($className, $data);
+            }
+
+            $instance = new $className();
+
+            $this->accessor->setValue($instance, 'value', $data);
+
+            return $instance;
         } elseif ($type instanceof InputObjectType) {
-            $instance = $this->getTypeClassInstance($type->name);
-            if (!$instance) {
+            $className = $this->getTypeClassName($type->name);
+            if (!$className) {
                 return $data;
             }
+
+            $instance = new $className();
 
             $fields = $type->getFields();
 

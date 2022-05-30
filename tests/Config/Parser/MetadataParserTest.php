@@ -263,6 +263,24 @@ abstract class MetadataParserTest extends TestCase
                 'TWILEK' => ['value' => '4'],
             ],
         ]);
+
+        $this->expect('ProtocolEnum', 'enum', [
+            'description' => 'The list of protocols',
+            'values' => [
+                'HTTP' => ['value' => 'http'],
+                'HTTPS' => ['value' => 'https', 'description' => 'Hypertext Transfer Protocol Secure'],
+                'FTP' => ['value' => 'ftp', 'deprecationReason' => 'Why not? Use sftp'],
+                'SFTP' => ['value' => 'sftp', 'description' => 'SSH File Transfer Protocol'],
+            ],
+        ]);
+
+        $this->expect('Choice', 'enum', [
+            'description' => 'Choice',
+            'values' => [
+                'YES' => ['value' => 'YES', 'description' => 'Happiness'],
+                'NO' => ['value' => 'NO'],
+            ],
+        ]);
     }
 
     public function testUnion(): void

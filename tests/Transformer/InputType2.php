@@ -20,4 +20,8 @@ class InputType2
      * @var mixed
      */
     public $field3;
+
+    public PhpEnum $field4;
+
+    public ?PhpEnum $field5 = null;
 }

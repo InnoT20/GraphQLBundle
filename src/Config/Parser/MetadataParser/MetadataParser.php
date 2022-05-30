@@ -15,6 +15,7 @@ use Overblog\GraphQLBundle\Config\Parser\PreParserInterface;
 use Overblog\GraphQLBundle\Relay\Connection\ConnectionInterface;
 use Overblog\GraphQLBundle\Relay\Connection\EdgeInterface;
 use Overblog\GraphQLBundle\Tests\Config\Parser\fixtures\annotations\Input\Planet;
+use Overblog\GraphQLBundle\Util\EnumHelper;
 use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionException;
@@ -578,7 +579,12 @@ abstract class MetadataParser implements PreParserInterface
             $enumValueAnnotation = current(
                 array_filter($enumValues, fn($enumValueAnnotation) => $enumValueAnnotation->name === $name)
             );
-            $valueConfig['value'] = $value;
+
+            if ($value instanceof \UnitEnum) {
+                $valueConfig['value'] = EnumHelper::getValue($value);
+            } else {
+                $valueConfig['value'] = $value;
+            }
 
             if (false !== $enumValueAnnotation) {
                 if (isset($enumValueAnnotation->description)) {
