@@ -10,6 +10,7 @@ use GraphQL\Type\Definition\EnumType;
 use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\ObjectType;
+use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Definition\UnionType;
 use Murtukov\PHPCodeGenerator\ArrowFunction;
@@ -43,7 +44,6 @@ use function key;
 use function ltrim;
 use function reset;
 use function rtrim;
-use function strpos;
 use function strtolower;
 use function substr;
 
@@ -329,6 +329,10 @@ class TypeBuilder
             $configLoader->addItem('resolveType', $this->buildResolveType($c->resolveType));
         }
 
+        if (isset($c->isTypeOf)) {
+            $configLoader->addItem('isTypeOf', $this->buildIsTypeOf($c->isTypeOf));
+        }
+
         if (isset($c->resolveField)) {
             $configLoader->addItem('resolveField', $this->buildResolve($c->resolveField));
         }
@@ -545,7 +549,7 @@ class TypeBuilder
         $array = Collection::assoc();
 
         if (!empty($c->link)) {
-            if (false === strpos($c->link, '::')) {
+            if (!str_contains($c->link, '::')) {
                 // e.g. App\Entity\Droid
                 $array->addItem('link', $c->link);
             } else {
@@ -613,7 +617,7 @@ class TypeBuilder
             $name = key($wrapper);
             $args = reset($wrapper);
 
-            if (false !== strpos($name, '\\')) {
+            if (str_contains($name, '\\')) {
                 // Custom constraint
                 $fqcn = ltrim($name, '\\');
                 $instance = Instance::new("@\\$fqcn");
@@ -632,6 +636,21 @@ class TypeBuilder
                 if (isset($args[0]) && is_array($args[0])) {
                     // Nested instance
                     $instance->addArgument($this->buildConstraints($args, false));
+                } elseif (isset($args['constraints'][0]) && is_array($args['constraints'][0])) {
+                    // Nested instance with "constraints" key (full syntax)
+                    $options = [
+                        'constraints' => $this->buildConstraints($args['constraints'], false),
+                    ];
+
+                    // Check for additional options
+                    foreach ($args as $key => $option) {
+                        if ('constraints' === $key) {
+                            continue;
+                        }
+                        $options[$key] = $option;
+                    }
+
+                    $instance->addArgument($options);
                 } else {
                     // Numeric or Assoc array?
                     $instance->addArgument(isset($args[0]) ? $args : Collection::assoc($args));
@@ -689,10 +708,12 @@ class TypeBuilder
         // Convert to object for better readability
         $c = (object) $fieldConfig;
 
+        // TODO(any): modify `InputValidator` and `TypeDecoratorListener` to support it before re-enabling this
+        // see https://github.com/overblog/GraphQLBundle/issues/973
         // If there is only 'type', use shorthand
-        if (1 === count($fieldConfig) && isset($c->type)) {
+        /*if (1 === count($fieldConfig) && isset($c->type)) {
             return $this->buildType($c->type);
-        }
+        }*/
 
         $field = Collection::assoc()
             ->addItem('type', $this->buildType($c->type));
@@ -921,6 +942,30 @@ class TypeBuilder
         }
 
         return $resolveType;
+    }
+
+    /**
+     * Builds an arrow function from a string with an expression prefix,
+     * otherwise just returns the provided value back untouched.
+     *
+     * Render example:
+     *
+     *      fn($className) => (($className = "App\\ClassName") && $value instanceof $className)
+     *
+     * @param mixed $isTypeOf
+     */
+    private function buildIsTypeOf($isTypeOf): ArrowFunction
+    {
+        if (EL::isStringWithTrigger($isTypeOf)) {
+            $expression = $this->expressionConverter->convert($isTypeOf);
+
+            return ArrowFunction::new(Literal::new($expression), 'bool')
+                ->setStatic()
+                ->addArguments('value', 'context')
+                ->addArgument('info', ResolveInfo::class);
+        }
+
+        return ArrowFunction::new($isTypeOf);
     }
 
     /**

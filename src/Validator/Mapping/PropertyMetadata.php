@@ -17,21 +17,21 @@ class PropertyMetadata extends MemberMetadata
     }
 
     /**
-     * @param mixed $object
+     * @param object|string $objectOrClassName
      *
      * @throws ReflectionException
      */
-    protected function newReflectionMember($object): ReflectionProperty
+    protected function newReflectionMember($objectOrClassName): ReflectionProperty
     {
-        $member = new ReflectionProperty($object, $this->getName());
+        $member = new ReflectionProperty($objectOrClassName, $this->getName());
         $member->setAccessible(true);
 
         return $member;
     }
 
     #[ReturnTypeWillChange]
-    public function getPropertyValue($object)
+    public function getPropertyValue(mixed $containingValue): mixed
     {
-        return $this->getReflectionMember($object)->getValue($object);
+        return $this->getReflectionMember($containingValue)->getValue($containingValue);
     }
 }

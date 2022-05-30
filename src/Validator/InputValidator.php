@@ -60,11 +60,9 @@ class InputValidator
     }
 
     /**
-     * @param string|array|null $groups
-     *
      * @throws ArgumentsValidationException
      */
-    public function validate($groups = null, bool $throw = true): ?ConstraintViolationListInterface
+    public function validate(string|array|null $groups = null, bool $throw = true): ?ConstraintViolationListInterface
     {
         $rootNode = new ValidationNode(
             $this->info->parentType,
@@ -77,7 +75,7 @@ class InputValidator
 
         $this->buildValidationTree(
             $rootNode,
-            $this->info->fieldDefinition->config['args'],
+            $this->info->fieldDefinition->config['args'] ?? [],
             $classMapping,
             $this->resolverArgs->args->getArrayCopy()
         );
@@ -95,7 +93,9 @@ class InputValidator
 
     private function mergeClassValidation(): array
     {
+        /** @phpstan-ignore-next-line */
         $common = static::normalizeConfig($this->info->parentType->config['validation'] ?? []);
+        /** @phpstan-ignore-next-line */
         $specific = static::normalizeConfig($this->info->fieldDefinition->config['validation'] ?? []);
 
         return array_filter([
@@ -127,7 +127,7 @@ class InputValidator
      * Creates a composition of ValidationNode objects from args
      * and simultaneously applies to them validation constraints.
      */
-    protected function buildValidationTree(ValidationNode $rootObject, array $fields, array $classValidation, array $inputData): ValidationNode
+    private function buildValidationTree(ValidationNode $rootObject, iterable $fields, array $classValidation, array $inputData): ValidationNode
     {
         $metadata = new ObjectMetadata($rootObject);
 
@@ -171,6 +171,7 @@ class InputValidator
                         [$fqcn, $property, $type] = $value;
 
                         if (!in_array($fqcn, $this->cachedMetadata)) {
+                            /** @phpstan-ignore-next-line */
                             $this->cachedMetadata[$fqcn] = $this->defaultValidator->getMetadataFor($fqcn);
                         }
 
@@ -238,6 +239,7 @@ class InputValidator
      */
     private function createObjectNode(array $value, $type, ValidationNode $parent): ValidationNode
     {
+        /** @phpstan-ignore-next-line */
         $classValidation = static::normalizeConfig($type->config['validation'] ?? []);
 
         return $this->buildValidationTree(
