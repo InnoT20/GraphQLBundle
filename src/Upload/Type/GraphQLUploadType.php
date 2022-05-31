@@ -8,7 +8,6 @@ use GraphQL\Error\InvariantViolation;
 use GraphQL\Type\Definition\ScalarType;
 use ReturnTypeWillChange;
 use Symfony\Component\HttpFoundation\File\File;
-use function get_class;
 use function gettype;
 use function is_object;
 use function sprintf;
@@ -39,7 +38,7 @@ class GraphQLUploadType extends ScalarType
             throw new InvariantViolation(sprintf(
                 'Upload should be null or instance of "%s" but %s given.',
                 File::class,
-                is_object($value) ? get_class($value) : gettype($value)
+                is_object($value) ? $value::class : gettype($value)
             ));
         }
 

@@ -6,7 +6,7 @@ namespace Overblog\GraphQLBundle\Config;
 
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\NodeDefinition;
-
+use function array_key_exists;
 use function is_string;
 
 class InputObjectTypeDefinition extends TypeDefinition
@@ -66,18 +66,14 @@ class InputObjectTypeDefinition extends TypeDefinition
 
     /**
      * set empty fields.access with fieldsDefaultAccess values if is set?
-     *
-     * @param ArrayNodeDefinition $node
      */
     private function treatFieldsDefaultAccess(ArrayNodeDefinition $node): void
     {
         $node->validate()
-            ->ifTrue(function ($v) {
-                return \array_key_exists('fieldsDefaultAccess', $v) && null !== $v['fieldsDefaultAccess'];
-            })
+            ->ifTrue(fn ($v) => array_key_exists('fieldsDefaultAccess', $v) && null !== $v['fieldsDefaultAccess'])
             ->then(function ($v) {
                 foreach ($v['fields'] as &$field) {
-                    if (\array_key_exists('access', $field) && null !== $field['access']) {
+                    if (array_key_exists('access', $field) && null !== $field['access']) {
                         continue;
                     }
 
@@ -91,18 +87,14 @@ class InputObjectTypeDefinition extends TypeDefinition
 
     /**
      * set empty fields.public with fieldsDefaultPublic values if is set?
-     *
-     * @param ArrayNodeDefinition $node
      */
     private function treatFieldsDefaultPublic(ArrayNodeDefinition $node): void
     {
         $node->validate()
-            ->ifTrue(function ($v) {
-                return \array_key_exists('fieldsDefaultPublic', $v) && null !== $v['fieldsDefaultPublic'];
-            })
+            ->ifTrue(fn ($v) => array_key_exists('fieldsDefaultPublic', $v) && null !== $v['fieldsDefaultPublic'])
             ->then(function ($v) {
                 foreach ($v['fields'] as &$field) {
-                    if (\array_key_exists('public', $field) && null !== $field['public']) {
+                    if (array_key_exists('public', $field) && null !== $field['public']) {
                         continue;
                     }
                     $field['public'] = $v['fieldsDefaultPublic'];

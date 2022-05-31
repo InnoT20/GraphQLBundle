@@ -15,7 +15,6 @@ use RuntimeException;
 use stdClass;
 use function array_keys;
 use function array_merge;
-use function get_class;
 use function sprintf;
 
 class ResolverMapTest extends TestCase
@@ -55,7 +54,7 @@ class ResolverMapTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage(sprintf(
             '%s::map() should return an array or an instance of \ArrayAccess and \Traversable but got "%s".',
-            get_class($resolverMap),
+            $resolverMap::class,
             $invalidType
         ));
         $resolverMap->resolve('Foo', 'bar');

@@ -21,7 +21,6 @@ use function array_pop;
 use function call_user_func;
 use function explode;
 use function file_get_contents;
-use function get_class;
 use function in_array;
 use function preg_replace;
 use function sprintf;
@@ -75,7 +74,7 @@ class GraphQLParser implements ParserInterface
 
     private static function throwUnsupportedDefinitionNode(DefinitionNode $typeDef): void
     {
-        $path = explode('\\', get_class($typeDef));
+        $path = explode('\\', $typeDef::class);
         throw new InvalidArgumentException(
             sprintf(
                 '%s definition is not supported right now.',

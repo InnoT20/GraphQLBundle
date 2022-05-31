@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Overblog\GraphQLBundle\Tests\Config\Parser\fixtures\annotations\Enum;
 
 use Overblog\GraphQLBundle\Annotation as GQL;
@@ -17,13 +19,10 @@ use Overblog\GraphQLBundle\Annotation as GQL;
 enum ProtocolEnum: string
 {
     case HTTP = 'http';
-
     #[GQL\Description('Hypertext Transfer Protocol Secure')]
     case HTTPS = 'https';
-
     #[GQL\Deprecated('Why not? Use sftp')]
     case FTP = 'ftp';
-
     #[GQL\Description('SSH File Transfer Protocol')]
     case SFTP = 'sftp';
 }

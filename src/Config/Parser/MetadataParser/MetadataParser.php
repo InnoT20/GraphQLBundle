@@ -14,7 +14,6 @@ use Overblog\GraphQLBundle\Config\Parser\MetadataParser\TypeGuesser\TypeHintType
 use Overblog\GraphQLBundle\Config\Parser\PreParserInterface;
 use Overblog\GraphQLBundle\Relay\Connection\ConnectionInterface;
 use Overblog\GraphQLBundle\Relay\Connection\EdgeInterface;
-use Overblog\GraphQLBundle\Tests\Config\Parser\fixtures\annotations\Input\Planet;
 use Overblog\GraphQLBundle\Util\EnumHelper;
 use ReflectionClass;
 use ReflectionClassConstant;
@@ -27,7 +26,7 @@ use SplFileInfo;
 use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
-
+use UnitEnum;
 use function array_filter;
 use function array_keys;
 use function array_map;
@@ -71,7 +70,7 @@ abstract class MetadataParser implements PreParserInterface
         self::GQL_TYPE,
         self::GQL_INTERFACE,
         self::GQL_UNION,
-        self::GQL_ENUM
+        self::GQL_ENUM,
     ];
 
     /**
@@ -128,7 +127,7 @@ abstract class MetadataParser implements PreParserInterface
         try {
             $className = $file->getBasename('.php');
             if (preg_match('#namespace (.+);#', file_get_contents($file->getRealPath()), $matches)) {
-                $className = trim($matches[1]) . '\\' . $className;
+                $className = trim($matches[1]).'\\'.$className;
             }
 
             $gqlTypes = [];
@@ -204,14 +203,14 @@ abstract class MetadataParser implements PreParserInterface
 
                         $edgeType = $classMetadata->edge ?? false;
                         if (!$edgeType) {
-                            $edgeType = $gqlName . 'Edge';
+                            $edgeType = $gqlName.'Edge';
                             $gqlTypes[$edgeType] = [
                                 'type' => 'object',
                                 'config' => [
                                     'builders' => [
                                         [
                                             'builder' => 'relay-edge',
-                                            'builderConfig' => ['nodeType' => $classMetadata->node]
+                                            'builderConfig' => ['nodeType' => $classMetadata->node],
                                         ],
                                     ],
                                 ],
@@ -412,8 +411,8 @@ abstract class MetadataParser implements PreParserInterface
 
                     $interfaceMetadata = self::getClassReflection($interfaceClassName);
                     if ($interfaceMetadata->isInterface() && $reflectionClass->implementsInterface(
-                            $interfaceMetadata->getName()
-                        )) {
+                        $interfaceMetadata->getName()
+                    )) {
                         return true;
                     }
 
@@ -435,9 +434,9 @@ abstract class MetadataParser implements PreParserInterface
         );
         if (!empty($buildersAnnotations)) {
             $typeConfiguration['builders'] = array_map(
-                fn($fieldsBuilderAnnotation) => [
+                fn ($fieldsBuilderAnnotation) => [
                     'builder' => $fieldsBuilderAnnotation->name,
-                    'builderConfig' => $fieldsBuilderAnnotation->config
+                    'builderConfig' => $fieldsBuilderAnnotation->config,
                 ],
                 $buildersAnnotations
             );
@@ -459,7 +458,7 @@ abstract class MetadataParser implements PreParserInterface
 
         return [
             'type' => $typeAnnotation->isRelay ? 'relay-mutation-payload' : 'object',
-            'config' => $typeConfiguration
+            'config' => $typeConfiguration,
         ];
     }
 
@@ -485,8 +484,8 @@ abstract class MetadataParser implements PreParserInterface
 
         $interfaceConfiguration['fields'] = array_merge($fieldsFromProperties, $fieldsFromMethods);
         $interfaceConfiguration = self::getDescriptionConfiguration(
-                static::getMetadatas($reflectionClass)
-            ) + $interfaceConfiguration;
+            static::getMetadatas($reflectionClass)
+        ) + $interfaceConfiguration;
 
         $interfaceConfiguration['resolveType'] = self::formatExpression($interfaceAnnotation->resolveType);
 
@@ -523,7 +522,7 @@ abstract class MetadataParser implements PreParserInterface
 
         return [
             'type' => $inputAnnotation->isRelay ? 'relay-mutation-input' : 'input-object',
-            'config' => $inputConfiguration
+            'config' => $inputConfiguration,
         ];
     }
 
@@ -549,8 +548,8 @@ abstract class MetadataParser implements PreParserInterface
         }
 
         $scalarConfiguration = self::getDescriptionConfiguration(
-                static::getMetadatas($reflectionClass)
-            ) + $scalarConfiguration;
+            static::getMetadatas($reflectionClass)
+        ) + $scalarConfiguration;
 
         return ['type' => 'custom-scalar', 'config' => $scalarConfiguration];
     }
@@ -577,10 +576,10 @@ abstract class MetadataParser implements PreParserInterface
             $valueConfig = self::getDescriptionConfiguration(static::getMetadatas($reflectionConstant), true);
 
             $enumValueAnnotation = current(
-                array_filter($enumValues, fn($enumValueAnnotation) => $enumValueAnnotation->name === $name)
+                array_filter($enumValues, fn ($enumValueAnnotation) => $enumValueAnnotation->name === $name)
             );
 
-            if ($value instanceof \UnitEnum) {
+            if ($value instanceof UnitEnum) {
                 $valueConfig['value'] = EnumHelper::getValue($value);
             } else {
                 $valueConfig['value'] = $value;
@@ -601,8 +600,8 @@ abstract class MetadataParser implements PreParserInterface
 
         $enumConfiguration = ['values' => $values];
         $enumConfiguration = self::getDescriptionConfiguration(
-                static::getMetadatas($reflectionClass)
-            ) + $enumConfiguration;
+            static::getMetadatas($reflectionClass)
+        ) + $enumConfiguration;
 
         return ['type' => 'enum', 'config' => $enumConfiguration];
     }
@@ -626,8 +625,8 @@ abstract class MetadataParser implements PreParserInterface
                     $typeMetadata = self::getClassReflection($typeClassName);
 
                     if ($reflectionClass->isInterface() && $typeMetadata->implementsInterface(
-                            $reflectionClass->getName()
-                        )) {
+                        $reflectionClass->getName()
+                    )) {
                         return true;
                     }
 
@@ -639,8 +638,8 @@ abstract class MetadataParser implements PreParserInterface
         }
 
         $unionConfiguration = self::getDescriptionConfiguration(
-                static::getMetadatas($reflectionClass)
-            ) + $unionConfiguration;
+            static::getMetadatas($reflectionClass)
+        ) + $unionConfiguration;
 
         if (isset($unionMetadata->resolveType)) {
             $unionConfiguration['resolveType'] = self::formatExpression($unionMetadata->resolveType);
@@ -681,8 +680,8 @@ abstract class MetadataParser implements PreParserInterface
      * @phpstan-param class-string<Metadata\Field> $fieldMetadataName
      *
      * @return array<string,array>
-     * @throws AnnotationException
      *
+     * @throws AnnotationException
      */
     private static function getTypeFieldConfigurationFromReflector(
         ReflectionClass $reflectionClass,
@@ -830,7 +829,7 @@ abstract class MetadataParser implements PreParserInterface
                     );
                 } catch (TypeGuessingException $e) {
                     $error = sprintf(
-                        'The attribute "type" on %s is missing on %s "%s" and cannot be auto-guessed from the following type guessers:' . "\n%s\n",
+                        'The attribute "type" on %s is missing on %s "%s" and cannot be auto-guessed from the following type guessers:'."\n%s\n",
                         static::formatMetadata($fieldMetadataName),
                         $reflector instanceof ReflectionProperty ? 'property' : 'method',
                         $reflector->getName(),
@@ -863,8 +862,8 @@ abstract class MetadataParser implements PreParserInterface
      * @param ReflectionProperty[] $reflectors
      *
      * @return array<string,array>
-     * @throws AnnotationException
      *
+     * @throws AnnotationException
      */
     private static function getGraphQLInputFieldsFromMetadatas(
         ReflectionClass $reflectionClass,
@@ -899,7 +898,7 @@ abstract class MetadataParser implements PreParserInterface
                 } catch (TypeGuessingException $e) {
                     throw new InvalidArgumentException(
                         sprintf(
-                            'The attribute "type" on %s is missing on property "%s" and cannot be auto-guessed from the following type guessers:' . "\n%s\n",
+                            'The attribute "type" on %s is missing on property "%s" and cannot be auto-guessed from the following type guessers:'."\n%s\n",
                             self::formatMetadata(Metadata\Field::class),
                             $reflector->getName(),
                             $e->getMessage()
@@ -1006,7 +1005,9 @@ abstract class MetadataParser implements PreParserInterface
             foreach ($providerReflection->getMethods() as $method) {
                 $metadatas = static::getMetadatas($method);
 
-                $metadata = self::getFirstMetadataMatching($metadatas, [Metadata\Mutation::class, Metadata\Query::class]
+                $metadata = self::getFirstMetadataMatching(
+                    $metadatas,
+                    [Metadata\Mutation::class, Metadata\Query::class]
                 );
                 if (null === $metadata) {
                     continue;
@@ -1234,7 +1235,7 @@ abstract class MetadataParser implements PreParserInterface
             } catch (TypeGuessingException $exception) {
                 throw new InvalidArgumentException(
                     sprintf(
-                        'Argument n°%s "$%s" on method "%s" cannot be auto-guessed from the following type guessers:' . "\n%s\n",
+                        'Argument n°%s "$%s" on method "%s" cannot be auto-guessed from the following type guessers:'."\n%s\n",
                         $index + 1,
                         $parameter->getName(),
                         $method->getName(),

@@ -79,7 +79,7 @@ class DoctrineTypeGuesser extends TypeGuesser
                 $type = $this->map->resolveType($target, ['type']);
 
                 if ($type) {
-                    $isMultiple = $associationAnnotations[get_class($associationAnnotation)];
+                    $isMultiple = $associationAnnotations[$associationAnnotation::class];
                     if ($isMultiple) {
                         return sprintf('[%s]!', $type);
                     } else {

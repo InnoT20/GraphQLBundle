@@ -96,7 +96,7 @@ abstract class ResolverMap implements ResolverMapInterface
             throw new RuntimeException(sprintf(
                 '%s::map() should return an array or an instance of \ArrayAccess and \Traversable but got "%s".',
                 get_class($this),
-                is_object($map) ? get_class($map) : gettype($map)
+                is_object($map) ? $map::class : gettype($map)
             ));
         }
     }

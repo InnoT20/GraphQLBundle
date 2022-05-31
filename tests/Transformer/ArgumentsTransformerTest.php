@@ -21,7 +21,6 @@ use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Validator\RecursiveValidator;
-
 use function class_exists;
 use function count;
 use function is_array;
@@ -83,7 +82,7 @@ class ArgumentsTransformerTest extends TestCase
                 'field2' => $t3,
                 'field3' => Type::nonNull($t3),
                 'field4' => Type::nonNull($t5),
-                'field5' => $t5
+                'field5' => $t5,
             ],
         ]);
 
@@ -126,7 +125,7 @@ class ArgumentsTransformerTest extends TestCase
                 ['field1' => 'world2'],
             ],
             'field2' => 3,
-            'field4' => PhpEnum::op2
+            'field4' => PhpEnum::op2,
         ];
 
         $res = $transformer->getInstanceAndValidate('InputType2', $data, $info, 'input2');
@@ -183,14 +182,14 @@ class ArgumentsTransformerTest extends TestCase
             'input2' => 'InputType2',
             'enum1' => 'Enum1',
             'int1' => 'Int!',
-            'string1' => 'String!'
+            'string1' => 'String!',
         ];
         $data = [
             'input1' => ['field1' => 'hello', 'field2' => 12, 'field3' => true],
             'input2' => [
                 'field1' => [['field1' => 'hello1'], ['field1' => 'hello2']],
                 'field2' => 12,
-                'field4' => 'val2'
+                'field4' => 'val2',
             ],
             'enum1' => 2,
             'int1' => 14,
@@ -223,7 +222,12 @@ class ArgumentsTransformerTest extends TestCase
     public function testRaisedErrors(): void
     {
         $violation = new ConstraintViolation(
-            'validation_error', 'validation_error', [], 'invalid', 'field2', 'invalid'
+            'validation_error',
+            'validation_error',
+            [],
+            'invalid',
+            'field2',
+            'invalid'
         );
         $builder = $this->getTransformer([
             'InputType1' => ['type' => 'input', 'class' => 'Overblog\GraphQLBundle\Tests\Transformer\InputType1'],
@@ -237,7 +241,7 @@ class ArgumentsTransformerTest extends TestCase
             'input2' => [
                 'field1' => [['field1' => 'hello1'], ['field1' => 'hello2']],
                 'field2' => 12,
-                'field4' => 'val2'
+                'field4' => 'val2',
             ],
         ];
 
@@ -259,14 +263,14 @@ class ArgumentsTransformerTest extends TestCase
                         'path' => 'field2',
                         'message' => 'validation_error',
                         'code' => null,
-                    ]
+                    ],
                 ],
                 'input2' => [
                     [
                         'path' => 'field2',
                         'message' => 'validation_error',
                         'code' => null,
-                    ]
+                    ],
                 ],
             ];
 
@@ -314,8 +318,8 @@ class ArgumentsTransformerTest extends TestCase
                 [
                     'field1' => [['field1' => 'hello1'], ['field1' => 'hello2']],
                     'field2' => 12,
-                    'field4' => 'val3'
-                ]
+                    'field4' => 'val3',
+                ],
             ],
         ];
 

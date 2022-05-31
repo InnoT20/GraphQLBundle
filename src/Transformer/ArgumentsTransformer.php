@@ -17,7 +17,7 @@ use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
-
+use UnitEnum;
 use function array_map;
 use function count;
 use function is_array;
@@ -42,7 +42,6 @@ class ArgumentsTransformer
     /**
      * Get the PHP class for a given type.
      *
-     * @param string $type
      * @return string<class-string>|false
      */
     private function getTypeClassName(string $type): string|false
@@ -76,17 +75,17 @@ class ArgumentsTransformer
         }
 
         if ($multiple) {
-            return array_map(fn($data) => $this->populateObject($type, $data, false, $info), $data);
+            return array_map(fn ($data) => $this->populateObject($type, $data, false, $info), $data);
         }
 
         if ($type instanceof EnumType) {
             $className = $this->getTypeClassName($type->name);
 
-            if ($className === false) {
+            if (false === $className) {
                 return $data;
             }
 
-            if (is_subclass_of($className, \UnitEnum::class)) {
+            if (is_subclass_of($className, UnitEnum::class)) {
                 return EnumHelper::buildInstance($className, $data);
             }
 

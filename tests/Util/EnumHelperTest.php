@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Overblog\GraphQLBundle\Tests\Util;
 
 use Overblog\GraphQLBundle\Tests\Config\Parser\fixtures\annotations\Enum\Choice;

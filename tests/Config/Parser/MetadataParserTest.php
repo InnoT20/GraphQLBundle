@@ -239,7 +239,7 @@ abstract class MetadataParserTest extends TestCase
                 'diameter' => ['type' => 'Int'],
                 'variable' => ['type' => 'Int!'],
                 'tags' => ['type' => '[String]!'],
-                'kgbWatchYou' => ['type' => 'Boolean!', 'public' => "@=hasRole('KGB')"]
+                'kgbWatchYou' => ['type' => 'Boolean!', 'public' => "@=hasRole('KGB')"],
             ],
         ]);
     }

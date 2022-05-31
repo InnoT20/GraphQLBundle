@@ -18,7 +18,6 @@ use Overblog\GraphQLBundle\Transformer\ArgumentsTransformer;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Validator\RecursiveValidator;
-
 use function class_exists;
 use function count;
 
@@ -75,7 +74,7 @@ class ArgumentsTest extends TestCase
                 'field1' => [['field1' => 'hello1'], ['field1' => 'hello2']],
                 'field2' => 12,
                 'field4' => 'val1',
-                'field5' => null
+                'field5' => null,
             ],
             'enum1' => 2,
             'enum2' => 'val3',
