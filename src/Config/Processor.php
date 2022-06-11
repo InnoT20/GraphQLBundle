@@ -7,6 +7,7 @@ namespace Overblog\GraphQLBundle\Config;
 use Overblog\GraphQLBundle\Config\Processor\BuilderProcessor;
 use Overblog\GraphQLBundle\Config\Processor\InheritanceProcessor;
 use Overblog\GraphQLBundle\Config\Processor\NamedConfigProcessor;
+use Overblog\GraphQLBundle\Config\Processor\PhpEnumProcessor;
 use Overblog\GraphQLBundle\Config\Processor\ProcessorInterface;
 use Overblog\GraphQLBundle\Config\Processor\RelayProcessor;
 
@@ -22,7 +23,9 @@ class Processor implements ProcessorInterface
             NamedConfigProcessor::class,
             InheritanceProcessor::class,
         ],
-        self::NORMALIZATION => [],
+        self::NORMALIZATION => [
+            PhpEnumProcessor::class,
+        ],
     ];
 
     public static function process(array $configs, int $type = self::NORMALIZATION): array

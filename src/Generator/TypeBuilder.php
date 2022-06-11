@@ -27,6 +27,7 @@ use Overblog\GraphQLBundle\Definition\GraphQLServices;
 use Overblog\GraphQLBundle\Definition\Resolver\AliasedInterface;
 use Overblog\GraphQLBundle\Definition\Type\CustomScalarType;
 use Overblog\GraphQLBundle\Definition\Type\GeneratedTypeInterface;
+use Overblog\GraphQLBundle\Definition\Type\PhpEnumType;
 use Overblog\GraphQLBundle\Error\ResolveErrors;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage as EL;
 use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
@@ -70,6 +71,7 @@ class TypeBuilder
         'interface' => InterfaceType::class,
         'union' => UnionType::class,
         'enum' => EnumType::class,
+        'php-enum' => PhpEnumType::class,
         'custom-scalar' => CustomScalarType::class,
     ];
 
@@ -125,12 +127,19 @@ class TypeBuilder
 
         $class->emptyLine();
 
-        $class->createConstructor()
+        $constructor = $class->createConstructor()
             ->addArgument('configProcessor', ConfigProcessor::class)
             ->addArgument(TypeGenerator::GRAPHQL_SERVICES, GraphQLServices::class)
             ->append('$config = ', $this->buildConfig($config))
-            ->emptyLine()
-            ->append('parent::__construct($configProcessor->process($config))');
+            ->emptyLine();
+
+        if ('php-enum' === $type) {
+            $constructor->append(sprintf('$phpEnum = \%s::class', $config['phpEnum']));
+            $constructor->emptyLine();
+            $constructor->append('parent::__construct($phpEnum, $configProcessor->process($config))');
+        } else {
+            $constructor->append('parent::__construct($configProcessor->process($config))');
+        }
 
         $class->createMethod('getAliases', 'public')
             ->setStatic()

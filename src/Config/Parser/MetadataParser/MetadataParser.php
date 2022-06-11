@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Config\Parser\MetadataParser;
 
+use BackedEnum;
 use Doctrine\Common\Annotations\AnnotationException;
 use Overblog\GraphQLBundle\Annotation\Annotation as Meta;
 use Overblog\GraphQLBundle\Annotation as Metadata;
@@ -14,7 +15,6 @@ use Overblog\GraphQLBundle\Config\Parser\MetadataParser\TypeGuesser\TypeHintType
 use Overblog\GraphQLBundle\Config\Parser\PreParserInterface;
 use Overblog\GraphQLBundle\Relay\Connection\ConnectionInterface;
 use Overblog\GraphQLBundle\Relay\Connection\EdgeInterface;
-use Overblog\GraphQLBundle\Util\EnumHelper;
 use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionException;
@@ -26,7 +26,6 @@ use SplFileInfo;
 use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
-use UnitEnum;
 use function array_filter;
 use function array_keys;
 use function array_map;
@@ -64,7 +63,11 @@ abstract class MetadataParser implements PreParserInterface
     /**
      * @see https://facebook.github.io/graphql/draft/#sec-Input-and-Output-Types
      */
-    private const VALID_INPUT_TYPES = [self::GQL_SCALAR, self::GQL_ENUM, self::GQL_INPUT];
+    private const VALID_INPUT_TYPES = [
+        self::GQL_SCALAR,
+        self::GQL_ENUM,
+        self::GQL_INPUT,
+    ];
     private const VALID_OUTPUT_TYPES = [
         self::GQL_SCALAR,
         self::GQL_TYPE,
@@ -579,8 +582,14 @@ abstract class MetadataParser implements PreParserInterface
                 array_filter($enumValues, fn ($enumValueAnnotation) => $enumValueAnnotation->name === $name)
             );
 
-            if ($value instanceof UnitEnum) {
-                $valueConfig['value'] = EnumHelper::getValue($value);
+            if ($reflectionClass->isEnum()) {
+                if ($value instanceof BackedEnum) {
+                    $valueConfig['value'] = $value->value;
+                } else {
+                    throw new InvalidArgumentException(
+                        sprintf('Enum type %s supports only backed enum type', $reflectionClass->getName())
+                    );
+                }
             } else {
                 $valueConfig['value'] = $value;
             }
@@ -602,6 +611,8 @@ abstract class MetadataParser implements PreParserInterface
         $enumConfiguration = self::getDescriptionConfiguration(
             static::getMetadatas($reflectionClass)
         ) + $enumConfiguration;
+
+        $enumConfiguration['phpEnum'] = $reflectionClass->isEnum() ? $reflectionClass->getName() : null;
 
         return ['type' => 'enum', 'config' => $enumConfiguration];
     }

@@ -92,6 +92,7 @@ class AnnotationParserTest extends MetadataParserTest
                 'P1' => ['value' => 1, 'description' => 'P1 description'],
                 'P2' => ['value' => 2, 'deprecationReason' => 'P2 deprecated'],
             ],
+            'phpEnum' => null,
         ]);
     }
 }

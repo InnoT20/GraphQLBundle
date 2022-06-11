@@ -67,6 +67,7 @@ class InheritanceTest extends TestCase
                         'YEAR' => ['value' => 3],
                     ],
                     'name' => 'Period',
+                    'phpEnum' => null,
                 ],
             ],
             $this->config['Period']

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Transformer;
 
+use BackedEnum;
 use GraphQL\Type\Definition\EnumType;
 use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\ListOfType;
@@ -12,12 +13,10 @@ use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use Overblog\GraphQLBundle\Error\InvalidArgumentError;
 use Overblog\GraphQLBundle\Error\InvalidArgumentsError;
-use Overblog\GraphQLBundle\Util\EnumHelper;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
-use UnitEnum;
 use function array_map;
 use function count;
 use function is_array;
@@ -85,8 +84,8 @@ class ArgumentsTransformer
                 return $data;
             }
 
-            if (is_subclass_of($className, UnitEnum::class)) {
-                return EnumHelper::buildInstance($className, $data);
+            if (is_subclass_of($className, BackedEnum::class)) {
+                return $className::from($data);
             }
 
             $instance = new $className();

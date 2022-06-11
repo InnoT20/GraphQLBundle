@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\Config;
 
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
+use Symfony\Component\Config\Definition\Builder\ScalarNodeDefinition;
 use function array_key_exists;
 use function is_array;
 use function is_null;
@@ -20,6 +21,7 @@ class EnumTypeDefinition extends TypeDefinition
         $node
             ->children()
                 ->append($this->nameSection())
+                ->append($this->phpEnumSection())
                 ->arrayNode('values')
                     ->useAttributeAsKey('name')
                     ->beforeNormalization()
@@ -52,6 +54,18 @@ class EnumTypeDefinition extends TypeDefinition
                     ->requiresAtLeastOneElement()
                 ->end()
                 ->append($this->descriptionSection())
+            ->end();
+
+        return $node;
+    }
+
+    protected function phpEnumSection(): ScalarNodeDefinition
+    {
+        /** @var ScalarNodeDefinition $node */
+        $node = self::createNode('phpEnum', 'scalar');
+
+        $node
+            ->defaultNull()
             ->end();
 
         return $node;

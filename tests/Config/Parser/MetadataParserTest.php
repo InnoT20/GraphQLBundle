@@ -7,6 +7,7 @@ namespace Overblog\GraphQLBundle\Tests\Config\Parser;
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\ORM\Mapping\Column;
 use Exception;
+use Overblog\GraphQLBundle\Tests\Config\Parser\fixtures\annotations\Enum\ProtocolEnum;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
@@ -262,6 +263,7 @@ abstract class MetadataParserTest extends TestCase
                 'ZABRAK' => ['value' => '3', 'deprecationReason' => 'The Zabraks have been wiped out'],
                 'TWILEK' => ['value' => '4'],
             ],
+            'phpEnum' => null,
         ]);
 
         $this->expect('ProtocolEnum', 'enum', [
@@ -272,14 +274,7 @@ abstract class MetadataParserTest extends TestCase
                 'FTP' => ['value' => 'ftp', 'deprecationReason' => 'Why not? Use sftp'],
                 'SFTP' => ['value' => 'sftp', 'description' => 'SSH File Transfer Protocol'],
             ],
-        ]);
-
-        $this->expect('Choice', 'enum', [
-            'description' => 'Choice',
-            'values' => [
-                'YES' => ['value' => 'YES', 'description' => 'Happiness'],
-                'NO' => ['value' => 'NO'],
-            ],
+            'phpEnum' => ProtocolEnum::class,
         ]);
     }
 
