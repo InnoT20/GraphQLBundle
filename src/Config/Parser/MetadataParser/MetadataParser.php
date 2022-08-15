@@ -50,6 +50,7 @@ abstract class MetadataParser implements PreParserInterface
     public const METADATA_FORMAT = '%s';
 
     private static ClassesTypesMap $map;
+    /** @var list<TypeGuesserInterface> */
     private static array $typeGuessers = [];
     private static array $providers = [];
     private static array $reflections = [];
