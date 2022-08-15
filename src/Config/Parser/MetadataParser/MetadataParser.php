@@ -10,6 +10,7 @@ use Overblog\GraphQLBundle\Annotation\Annotation as Meta;
 use Overblog\GraphQLBundle\Annotation as Metadata;
 use Overblog\GraphQLBundle\Config\Parser\MetadataParser\TypeGuesser\DocBlockTypeGuesser;
 use Overblog\GraphQLBundle\Config\Parser\MetadataParser\TypeGuesser\DoctrineTypeGuesser;
+use Overblog\GraphQLBundle\Config\Parser\MetadataParser\TypeGuesser\TypeGuesserInterface;
 use Overblog\GraphQLBundle\Config\Parser\MetadataParser\TypeGuesser\TypeGuessingException;
 use Overblog\GraphQLBundle\Config\Parser\MetadataParser\TypeGuesser\TypeHintTypeGuesser;
 use Overblog\GraphQLBundle\Config\Parser\PreParserInterface;
@@ -112,6 +113,11 @@ abstract class MetadataParser implements PreParserInterface
         ];
         self::$providers = [];
         self::$reflections = [];
+    }
+
+    public static function addTypeGuesser(TypeGuesserInterface $guesser): void
+    {
+        self::$typeGuessers[] = $guesser;
     }
 
     /**
