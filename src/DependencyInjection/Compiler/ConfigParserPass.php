@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Overblog\GraphQLBundle\Config\Parser\AnnotationParser;
 use Overblog\GraphQLBundle\Config\Parser\AttributeParser;
 use Overblog\GraphQLBundle\Config\Parser\GraphQLParser;
+use Overblog\GraphQLBundle\Config\Parser\MetadataParser\TypeGuesser\TypeGuesserInterface;
 use Overblog\GraphQLBundle\Config\Parser\ParserInterface;
 use Overblog\GraphQLBundle\Config\Parser\PreParserInterface;
 use Overblog\GraphQLBundle\Config\Parser\YamlParser;
@@ -57,6 +58,8 @@ final class ConfigParserPass implements CompilerPassInterface
         'attribute' => AttributeParser::class,
     ];
 
+    public const GUESSER_TAG = 'overblog_graphql.guesser';
+
     private static array $defaultDefaultConfig = [
         'definitions' => [
             'mappings' => [
@@ -97,10 +100,19 @@ final class ConfigParserPass implements CompilerPassInterface
         $typesMappings = array_merge(...$typesMappings);
         $typeConfigs = [];
 
+
+        $guessers = $this->getGuessers($container);
+
         // treats mappings
         // Pre-parse all files
         AnnotationParser::reset($config);
         AttributeParser::reset($config);
+
+        foreach ($guessers as $guesser) {
+            AnnotationParser::addTypeGuesser($guesser);
+            AttributeParser::addTypeGuesser($guesser);
+        }
+
         $typesNeedPreParsing = $this->typesNeedPreParsing();
         foreach ($typesMappings as $params) {
             if ($typesNeedPreParsing[$params['type']]) {
@@ -278,6 +290,19 @@ final class ConfigParserPass implements CompilerPassInterface
         $bundle = new ReflectionClass($bundleClass); // @phpstan-ignore-line
 
         return dirname($bundle->getFileName());
+    }
+
+    /**
+     * @param ContainerBuilder $builder
+     * @return list<TypeGuesserInterface>
+     * @throws \Exception
+     */
+    private function getGuessers(ContainerBuilder $builder): array
+    {
+        return array_map(
+            static fn(string $alias) => $builder->get($alias),
+            array_keys($builder->findTaggedServiceIds(self::GUESSER_TAG))
+        );
     }
 
     private function getAliasPrefix(): string
