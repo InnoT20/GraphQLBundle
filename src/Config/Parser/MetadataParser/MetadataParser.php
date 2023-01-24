@@ -121,7 +121,7 @@ abstract class MetadataParser implements PreParserInterface
         try {
             $className = $file->getBasename('.php');
             if (preg_match('#namespace (.+);#', file_get_contents($file->getRealPath()), $matches)) {
-                $className = trim($matches[1]).'\\'.$className;
+                $className = trim($matches[1]) . '\\' . $className;
             }
 
             $gqlTypes = [];
@@ -151,11 +151,12 @@ abstract class MetadataParser implements PreParserInterface
      */
     private static function classMetadatasToGQLConfiguration(
         ReflectionClass $reflectionClass,
-        Meta $classMetadata,
-        array $configs,
-        array $gqlTypes,
-        bool $preProcess
-    ): array {
+        Meta            $classMetadata,
+        array           $configs,
+        array           $gqlTypes,
+        bool            $preProcess
+    ): array
+    {
         $gqlConfiguration = $gqlType = $gqlName = null;
 
         switch (true) {
@@ -176,7 +177,7 @@ abstract class MetadataParser implements PreParserInterface
 
                         $edgeType = $classMetadata->edge ?? false;
                         if (!$edgeType) {
-                            $edgeType = $gqlName.'Edge';
+                            $edgeType = $gqlName . 'Edge';
                             $gqlTypes[$edgeType] = [
                                 'type' => 'object',
                                 'config' => [
@@ -272,10 +273,11 @@ abstract class MetadataParser implements PreParserInterface
 
     private static function typeMetadataToGQLConfiguration(
         ReflectionClass $reflectionClass,
-        Metadata\Type $classMetadata,
-        string $gqlName,
-        array $configs
-    ): array {
+        Metadata\Type   $classMetadata,
+        string          $gqlName,
+        array           $configs
+    ): array
+    {
         $isMutation = $isDefault = $isRoot = false;
         if (isset($configs['definitions']['schema'])) {
             $defaultSchemaName = isset($configs['definitions']['schema']['default']) ? 'default' : array_key_first($configs['definitions']['schema']);
@@ -356,7 +358,7 @@ abstract class MetadataParser implements PreParserInterface
 
         $buildersAnnotations = self::getMetadataMatching($metadatas, Metadata\FieldsBuilder::class);
         if (!empty($buildersAnnotations)) {
-            $typeConfiguration['builders'] = array_map(fn ($fieldsBuilderAnnotation) => ['builder' => $fieldsBuilderAnnotation->name, 'builderConfig' => $fieldsBuilderAnnotation->config], $buildersAnnotations);
+            $typeConfiguration['builders'] = array_map(fn($fieldsBuilderAnnotation) => ['builder' => $fieldsBuilderAnnotation->name, 'builderConfig' => $fieldsBuilderAnnotation->config], $buildersAnnotations);
         }
 
         if (isset($typeAnnotation->isTypeOf)) {
@@ -450,7 +452,7 @@ abstract class MetadataParser implements PreParserInterface
             $reflectionConstant = new ReflectionClassConstant($reflectionClass->getName(), $name);
             $valueConfig = self::getDescriptionConfiguration(static::getMetadatas($reflectionConstant), true);
 
-            $enumValueAnnotation = current(array_filter($enumValues, fn ($enumValueAnnotation) => $enumValueAnnotation->name === $name));
+            $enumValueAnnotation = current(array_filter($enumValues, fn($enumValueAnnotation) => $enumValueAnnotation->name === $name));
             $valueConfig['value'] = $isPhpEnum ? $value->name : $value;
 
             if (false !== $enumValueAnnotation) {
@@ -610,7 +612,7 @@ abstract class MetadataParser implements PreParserInterface
                 try {
                     $fieldConfiguration['type'] = self::guessType($reflectionClass, $reflector, self::VALID_OUTPUT_TYPES);
                 } catch (TypeGuessingException $e) {
-                    $error = sprintf('The attribute "type" on %s is missing on %s "%s" and cannot be auto-guessed from the following type guessers:'."\n%s\n", static::formatMetadata($fieldMetadataName), $reflector instanceof ReflectionProperty ? 'property' : 'method', $reflector->getName(), $e->getMessage());
+                    $error = sprintf('The attribute "type" on %s is missing on %s "%s" and cannot be auto-guessed from the following type guessers:' . "\n%s\n", static::formatMetadata($fieldMetadataName), $reflector instanceof ReflectionProperty ? 'property' : 'method', $reflector->getName(), $e->getMessage());
 
                     throw new InvalidArgumentException($error);
                 }
@@ -650,6 +652,8 @@ abstract class MetadataParser implements PreParserInterface
 
             /** @var Metadata\Field|null $fieldMetadata */
             $fieldMetadata = self::getFirstMetadataMatching($metadatas, Metadata\Field::class);
+            $accessMetadata = self::getFirstMetadataMatching($metadatas, Metadata\Access::class);
+            $publicMetadata = self::getFirstMetadataMatching($metadatas, Metadata\IsPublic::class);
 
             // No field metadata found
             if (null === $fieldMetadata) {
@@ -668,7 +672,7 @@ abstract class MetadataParser implements PreParserInterface
                 try {
                     $fieldType = self::guessType($reflectionClass, $reflector, self::VALID_INPUT_TYPES);
                 } catch (TypeGuessingException $e) {
-                    throw new InvalidArgumentException(sprintf('The attribute "type" on %s is missing on property "%s" and cannot be auto-guessed from the following type guessers:'."\n%s\n", self::formatMetadata(Metadata\Field::class), $reflector->getName(), $e->getMessage()));
+                    throw new InvalidArgumentException(sprintf('The attribute "type" on %s is missing on property "%s" and cannot be auto-guessed from the following type guessers:' . "\n%s\n", self::formatMetadata(Metadata\Field::class), $reflector->getName(), $e->getMessage()));
                 }
             }
             $fieldConfiguration = [];
@@ -681,6 +685,14 @@ abstract class MetadataParser implements PreParserInterface
                 }
 
                 $fieldConfiguration['type'] = $fieldType;
+            }
+
+            if ($accessMetadata) {
+                $fieldConfiguration['access'] = self::formatExpression($accessMetadata->value);
+            }
+
+            if ($publicMetadata) {
+                $fieldConfiguration['public'] = self::formatExpression($publicMetadata->value);
             }
 
             $fieldConfiguration = array_merge(self::getDescriptionConfiguration($metadatas, true), $fieldConfiguration);
@@ -936,7 +948,7 @@ abstract class MetadataParser implements PreParserInterface
             try {
                 $gqlType = self::guessType($reflectionClass, $parameter, self::VALID_INPUT_TYPES);
             } catch (TypeGuessingException $exception) {
-                throw new InvalidArgumentException(sprintf('Argument n°%s "$%s" on method "%s" cannot be auto-guessed from the following type guessers:'."\n%s\n", $index + 1, $parameter->getName(), $method->getName(), $exception->getMessage()));
+                throw new InvalidArgumentException(sprintf('Argument n°%s "$%s" on method "%s" cannot be auto-guessed from the following type guessers:' . "\n%s\n", $index + 1, $parameter->getName(), $method->getName(), $exception->getMessage()));
             }
 
             $argumentConfig = [];

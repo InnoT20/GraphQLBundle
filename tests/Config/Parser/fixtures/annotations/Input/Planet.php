@@ -33,6 +33,14 @@ final class Planet
     public string $population;
 
     /**
+     * @GQL\Field(type="Boolean!")
+     * @GQL\IsPublic("hasRole('ALIEN')")
+     */
+    #[GQL\Field(type: 'Boolean!')]
+    #[GQL\IsPublic("hasRole('ALIEN')")]
+    protected bool $isInhabited;
+
+    /**
      * @GQL\Field
      */
     #[GQL\Field]
