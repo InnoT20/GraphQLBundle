@@ -8,6 +8,7 @@ use Overblog\GraphQLBundle\Annotation as GQL;
 
 /**
  * @GQL\Input
+ *
  * @GQL\Description("Planet Input type description")
  */
 #[GQL\Input]
@@ -67,4 +68,13 @@ final class Planet
      */
     #[GQL\Field(type: '[String]!')]
     public array $tags;
+
+    /**
+     * @GQL\Field(type="Boolean!")
+     *
+     * @GQL\Deprecated("No more alien invasions on planets")
+     */
+    #[GQL\Field(type: 'Boolean!')]
+    #[GQL\Deprecated('No more alien invasions on planets')]
+    public string $alienInvasion;
 }
