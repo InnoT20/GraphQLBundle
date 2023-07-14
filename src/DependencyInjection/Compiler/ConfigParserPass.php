@@ -23,7 +23,6 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;
-
 use function array_count_values;
 use function array_filter;
 use function array_keys;
@@ -81,7 +80,7 @@ final class ConfigParserPass implements CompilerPassInterface
     public function process(ContainerBuilder $container): void
     {
         $config = $this->processConfiguration([$this->getConfigs($container)]);
-        $container->setParameter($this->getAlias().'.config', $config);
+        $container->setParameter($this->getAlias() . '.config', $config);
     }
 
     public function processConfiguration(array $configs): array
@@ -93,7 +92,7 @@ final class ConfigParserPass implements CompilerPassInterface
     {
         $config = $container->getParameterBag()->resolveValue($container->getParameter('overblog_graphql.config'));
         $container->getParameterBag()->remove('overblog_graphql.config');
-        $container->setParameter($this->getAlias().'.classes_map', []);
+        $container->setParameter($this->getAlias() . '.classes_map', []);
         $typesMappings = $this->mappingConfig($config, $container);
         // reset treated files
         $this->treatedFiles = [];
@@ -172,7 +171,7 @@ final class ConfigParserPass implements CompilerPassInterface
     private function checkTypesDuplication(array $typeConfigs): void
     {
         $types = array_merge(...array_map('array_keys', $typeConfigs));
-        $duplications = array_keys(array_filter(array_count_values($types), fn ($count) => $count > 1));
+        $duplications = array_keys(array_filter(array_count_values($types), fn($count) => $count > 1));
         if (!empty($duplications)) {
             throw new ForbiddenOverwriteException(sprintf(
                 'Types (%s) cannot be overwritten. See inheritance doc section for more details.',
@@ -192,7 +191,7 @@ final class ConfigParserPass implements CompilerPassInterface
         // app only config files (yml or xml or graphql)
         if ($mappingConfig['auto_discover']['root_dir'] && $container->hasParameter('kernel.root_dir')) {
             // @phpstan-ignore-next-line
-            $typesMappings[] = ['dir' => $container->getParameter('kernel.root_dir').'/config/graphql', 'types' => null];
+            $typesMappings[] = ['dir' => $container->getParameter('kernel.root_dir') . '/config/graphql', 'types' => null];
         }
         if ($mappingConfig['auto_discover']['bundles']) {
             $mappingFromBundles = $this->mappingFromBundles($container);
@@ -200,7 +199,7 @@ final class ConfigParserPass implements CompilerPassInterface
         }
         if ($mappingConfig['auto_discover']['built_in']) {
             $typesMappings[] = [
-                'dir' => $this->bundleDir(OverblogGraphQLBundle::class).'/Resources/config/graphql',
+                'dir' => $this->bundleDir(OverblogGraphQLBundle::class) . '/Resources/config/graphql',
                 'types' => ['yaml'],
             ];
         }
@@ -241,7 +240,7 @@ final class ConfigParserPass implements CompilerPassInterface
             $bundleDir = $this->bundleDir($class);
 
             // only config files (yml)
-            $typesMappings[] = ['dir' => $bundleDir.'/Resources/config/graphql', 'types' => null];
+            $typesMappings[] = ['dir' => $bundleDir . '/Resources/config/graphql', 'types' => null];
         }
 
         return $typesMappings;
@@ -299,10 +298,16 @@ final class ConfigParserPass implements CompilerPassInterface
      */
     private function getGuessers(ContainerBuilder $builder): array
     {
-        return array_map(
-            static fn(string $alias) => $builder->get($alias),
-            array_keys($builder->findTaggedServiceIds(self::GUESSER_TAG))
-        );
+        $guessers = [];
+
+        foreach ($builder->findTaggedServiceIds(self::GUESSER_TAG) as $id => $_) {
+            /** @var TypeGuesserInterface $instance */
+            $instance = $builder->get($id);
+
+            $guessers[] = $instance;
+        }
+
+        return $guessers;
     }
 
     private function getAliasPrefix(): string
@@ -312,6 +317,6 @@ final class ConfigParserPass implements CompilerPassInterface
 
     private function getAlias(): string
     {
-        return $this->getAliasPrefix().'_types';
+        return $this->getAliasPrefix() . '_types';
     }
 }

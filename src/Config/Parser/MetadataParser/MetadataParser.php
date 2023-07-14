@@ -922,14 +922,14 @@ abstract class MetadataParser implements PreParserInterface
     private static function guessType(ReflectionClass $reflectionClass, Reflector $reflector, array $filterGraphQLTypes = []): string
     {
         $errors = [];
+
         foreach (self::$typeGuessers as $typeGuesser) {
             if (!$typeGuesser->supports($reflector)) {
                 continue;
             }
-            try {
-                $type = $typeGuesser->guessType($reflectionClass, $reflector, $filterGraphQLTypes);
 
-                return $type;
+            try {
+                return $typeGuesser->guessType($reflectionClass, $reflector, $filterGraphQLTypes);
             } catch (TypeGuessingException $exception) {
                 $errors[] = sprintf('[%s] %s', $typeGuesser->getName(), $exception->getMessage());
             }

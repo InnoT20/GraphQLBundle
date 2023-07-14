@@ -145,22 +145,12 @@ final class DoctrineTypeGuesser extends TypeGuesser
             return $this->doctrineMapping[$doctrineType];
         }
 
-        switch ($doctrineType) {
-            case 'integer':
-            case 'smallint':
-            case 'bigint':
-                return 'Int';
-            case 'string':
-            case 'text':
-                return 'String';
-            case 'bool':
-            case 'boolean':
-                return 'Boolean';
-            case 'float':
-            case 'decimal':
-                return 'Float';
-            default:
-                return null;
-        }
+        return match ($doctrineType) {
+            'integer', 'smallint', 'bigint' => 'Int',
+            'string', 'text' => 'String',
+            'bool', 'boolean' => 'Boolean',
+            'float', 'decimal' => 'Float',
+            default => null,
+        };
     }
 }
