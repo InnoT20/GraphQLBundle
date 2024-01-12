@@ -301,7 +301,7 @@ final class TypeBuilder
         $configLoader->addItem('name', new Literal('self::NAME'));
 
         if (isset($c->description)) {
-            $configLoader->addItem('description', $c->description);
+            $configLoader->addItem('description', new Heredoc($c->description));
         }
 
         // only by input-object types (for class level validation)
@@ -733,7 +733,7 @@ final class TypeBuilder
         }
 
         if (isset($c->description)) {
-            $field->addItem('description', $c->description);
+            $field->addItem('description', new Heredoc($c->description));
         }
 
         if (!empty($c->args)) {
@@ -800,7 +800,7 @@ final class TypeBuilder
             ->addItem('type', $this->buildType($c->type));
 
         if (isset($c->description)) {
-            $arg->addIfNotEmpty('description', $c->description);
+            $arg->addIfNotEmpty('description', new Heredoc($c->description));
         }
 
         if (property_exists($c, 'defaultValue')) {
