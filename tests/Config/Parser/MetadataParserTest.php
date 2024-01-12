@@ -230,7 +230,8 @@ abstract class MetadataParserTest extends TestCase
                 'diameter' => ['type' => 'Int'],
                 'variable' => ['type' => 'Int!'],
                 'tags' => ['type' => '[String]!'],
-                'isInhabited' => ['type' => 'Boolean!', 'public' => "@=hasRole('ALIEN')"]
+                'isInhabited' => ['type' => 'Boolean!', 'public' => "@=hasRole('ALIEN')"],
+                'alienInvasion' => ['type' => 'Boolean!', 'deprecationReason' => 'No more alien invasions on planets'],
             ],
         ]);
     }
